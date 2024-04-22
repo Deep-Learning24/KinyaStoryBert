@@ -16,17 +16,17 @@ class SublayerConnection(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, sublayer):
-        logging.info(f'Entering SublayerConnection forward method')
-        logging.info(f'x shape: {x.shape}')
+        #logging.info(f'Entering SublayerConnection forward method')
+        #logging.info(f'x shape: {x.shape}')
 
         try:
-            logging.info('Applying layer norm and sublayer')
+            #logging.info('Applying layer norm and sublayer')
             sublayer_output = sublayer(self.norm(x))
 
-            logging.info('Applying dropout and adding to original input')
+            #logging.info('Applying dropout and adding to original input')
             output = x + self.dropout(sublayer_output)
 
-            logging.info('Returning from SublayerConnection forward method')
+            #logging.info('Returning from SublayerConnection forward method')
             return output
         except Exception as e:
             logging.error(f'Error in SublayerConnection forward: {e}')

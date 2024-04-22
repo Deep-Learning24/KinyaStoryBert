@@ -12,4 +12,8 @@ REM Step 3: Run KinyaTokenizer script
 echo Running KinyaTokenizer...
 python KinyaTokenizer.py
 
+REM Step 4: Run Kinya_main script
+echo Running Kinya_main...
+python kinya_main.py --train_dataset tokenized_data.pt --output_path output/bert.model
+
 echo Setup completed successfully.

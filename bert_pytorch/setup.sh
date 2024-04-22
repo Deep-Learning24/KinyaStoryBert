@@ -12,4 +12,20 @@ python3 download_kinyastory.py
 echo "Running KinyaTokenizer..."
 python3 KinyaTokenizer.py
 
+# create output directory if it doesn't exist
+
+if [ ! -d "output" ]; then
+  mkdir output
+fi
+
+# Step 4: Run Kinya_main script
+echo Running Kinya_main...
+python3 kinya_main.py --train_dataset tokenized_data.pt --output_path output/bert.model
+
+# create output directory if it doesn't exist
+
+if [ ! -d "output" ]; then
+  mkdir output
+fi
+
 echo "Setup completed successfully."
