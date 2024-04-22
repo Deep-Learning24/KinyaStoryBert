@@ -1,5 +1,12 @@
 data/
 output/
+*.csv
+*.log
+*.json
+*.pickle
+*.pkl
+*.pt 
+*.pth
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
