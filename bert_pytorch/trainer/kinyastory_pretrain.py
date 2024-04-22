@@ -7,11 +7,11 @@ from .optim_schedule import ScheduledOptim
 sys.path.append('../')
 from model import BERTLM, BERT
 
-
 import tqdm
+import logging
 
 
-class BERTTrainer:
+class KinyaStoryBERTTrainer:
     """
     BERTTrainer make the pretrained BERT model with two LM training method.
 
@@ -66,6 +66,10 @@ class BERTTrainer:
         self.log_freq = log_freq
 
         print("Total Parameters:", sum([p.nelement() for p in self.model.parameters()]))
+        logging.basicConfig(level=logging.INFO)
+
+        logging.info(f'Initialized BERT trainer with cuda: {cuda_condition}, device: {self.device}')
+        logging.info(f'Total Parameters: {sum([p.nelement() for p in self.model.parameters()])}')
 
     def train(self, epoch):
         self.iteration(epoch, self.train_data)
@@ -73,71 +77,101 @@ class BERTTrainer:
     def test(self, epoch):
         self.iteration(epoch, self.test_data, train=False)
 
+    
+    
     def iteration(self, epoch, data_loader, train=True):
-        """
-        loop over the data_loader for training or testing
-        if on train status, backward operation is activated
-        and also auto save the model every peoch
-
-        :param epoch: current epoch index
-        :param data_loader: torch.utils.data.DataLoader for iteration
-        :param train: boolean value of is train or test
-        :return: None
-        """
+        
+        logging.info(f'Starting iteration, epoch: {epoch}, train: {train}')
+    
         str_code = "train" if train else "test"
-
-        # Setting the tqdm progress bar
+    
         data_iter = tqdm.tqdm(enumerate(data_loader),
                               desc="EP_%s:%d" % (str_code, epoch),
                               total=len(data_loader),
                               bar_format="{l_bar}{r_bar}")
-
+    
         avg_loss = 0.0
-        total_correct = 0
-        total_element = 0
-
+    
         for i, data in data_iter:
-            # 0. batch_data will be sent into the device(GPU or cpu)
             data = {key: value.to(self.device) for key, value in data.items()}
+            logging.info(f'bert_input shape: {data["bert_input"].shape}, device: {data["bert_input"].device}')
+            logging.info(f'segment_label shape: {data["segment_label"].shape}, device: {data["segment_label"].device}')
+            logging.info(f'model device: {next(self.model.parameters()).device}')
+    
+            # forward the masked language model
+            mask_lm_output = self.model.forward(data["bert_input"], data["segment_label"])
 
-            # 1. forward the next_sentence_prediction and masked_lm model
-            next_sent_output, mask_lm_output = self.model.forward(data["bert_input"], data["segment_label"])
+            logging.info(f'Forwarded masked language model, output: {mask_lm_output}')
+    
+            # NLLLoss of predicting masked token word
+            try:
+                mask_lm_output = self.model.forward(data["bert_input"], data["segment_label"])
+            except Exception as e:
+                logging.error(f'Error in model forward: {e}')
+                raise
 
-            # 2-1. NLL(negative log likelihood) loss of is_next classification result
-            next_loss = self.criterion(next_sent_output, data["is_next"])
-
-            # 2-2. NLLLoss of predicting masked token word
-            mask_loss = self.criterion(mask_lm_output.transpose(1, 2), data["bert_label"])
-
-            # 2-3. Adding next_loss and mask_loss : 3.4 Pre-training Procedure
-            loss = next_loss + mask_loss
-
-            # 3. backward and optimization only in train
+            logging.info(f'Calculated NLLLoss, loss: {mask_loss}')
+    
+            # backward and optimization only in train
             if train:
                 self.optim_schedule.zero_grad()
-                loss.backward()
+                mask_loss.backward()
                 self.optim_schedule.step_and_update_lr()
+    
+            avg_loss += mask_loss.item()
 
-            # next sentence prediction accuracy
-            correct = next_sent_output.argmax(dim=-1).eq(data["is_next"]).sum().item()
-            avg_loss += loss.item()
-            total_correct += correct
-            total_element += data["is_next"].nelement()
-
+            logging.info(f'Updated avg_loss: {avg_loss}')
+    
             post_fix = {
                 "epoch": epoch,
                 "iter": i,
                 "avg_loss": avg_loss / (i + 1),
-                "avg_acc": total_correct / total_element * 100,
-                "loss": loss.item()
+                "loss": mask_loss.item()
             }
-
+    
             if i % self.log_freq == 0:
                 data_iter.write(str(post_fix))
-
-        print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_iter), "total_acc=",
-              total_correct * 100.0 / total_element)
-
+                logging.info(f'Iteration: {i}, loss: {mask_loss.item()}, avg_loss: {avg_loss / (i + 1)}')
+    
+        logging.info(f'Finished iteration, epoch: {epoch}, avg_loss: {avg_loss / len(data_iter)}')
+        print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_iter))
+        str_code = "train" if train else "test"
+    
+        data_iter = tqdm.tqdm(enumerate(data_loader),
+                              desc="EP_%s:%d" % (str_code, epoch),
+                              total=len(data_loader),
+                              bar_format="{l_bar}{r_bar}")
+    
+        avg_loss = 0.0
+    
+        for i, data in data_iter:
+            data = {key: value.to(self.device) for key, value in data.items()}
+    
+            # forward the masked language model
+            mask_lm_output = self.model.forward(data["bert_input"], data["segment_label"])
+    
+            # NLLLoss of predicting masked token word
+            mask_loss = self.criterion(mask_lm_output.transpose(1, 2), data["bert_label"])
+    
+            # backward and optimization only in train
+            if train:
+                self.optim_schedule.zero_grad()
+                mask_loss.backward()
+                self.optim_schedule.step_and_update_lr()
+    
+            avg_loss += mask_loss.item()
+    
+            post_fix = {
+                "epoch": epoch,
+                "iter": i,
+                "avg_loss": avg_loss / (i + 1),
+                "loss": mask_loss.item()
+            }
+    
+            if i % self.log_freq == 0:
+                data_iter.write(str(post_fix))
+    
+        print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_iter))
     def save(self, epoch, file_path="output/bert_trained.model"):
         """
         Saving the current BERT model on file_path

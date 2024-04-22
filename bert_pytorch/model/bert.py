@@ -4,6 +4,8 @@ from .transformer import TransformerBlock
 from .embedding import BERTEmbedding
 
 
+import logging
+
 class BERT(nn.Module):
     """
     BERT model : Bidirectional Encoder Representations from Transformers.
@@ -34,15 +36,23 @@ class BERT(nn.Module):
             [TransformerBlock(hidden, attn_heads, hidden * 4, dropout) for _ in range(n_layers)])
 
     def forward(self, x, segment_info):
-        # attention masking for padded token
-        # torch.ByteTensor([batch_size, 1, seq_len, seq_len)
-        mask = (x > 0).unsqueeze(1).repeat(1, x.size(1), 1).unsqueeze(1)
+        logging.info(f'Entering BERT forward method')
+        logging.info(f'x shape: {x.shape}, segment_info shape: {segment_info.shape}')
 
-        # embedding the indexed sequence to sequence of vectors
-        x = self.embedding(x, segment_info)
-
-        # running over multiple transformer blocks
-        for transformer in self.transformer_blocks:
-            x = transformer.forward(x, mask)
-
-        return x
+        try:
+            logging.info('Creating mask')
+            mask = (x > 0).unsqueeze(1).repeat(1, x.size(1), 1).unsqueeze(1)
+        
+            logging.info('Applying embedding')
+            x = self.embedding(x, segment_info)
+        
+            logging.info('Running transformer blocks')
+            for i, transformer in enumerate(self.transformer_blocks):
+                logging.info(f'Running transformer block {i}')
+                x = transformer.forward(x, mask)
+        
+            logging.info('Returning from BERT forward method')
+            return x
+        except Exception as e:
+            logging.error(f'Error in BERT forward: {e}')
+            raise

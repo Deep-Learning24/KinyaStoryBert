@@ -95,14 +95,13 @@ class KinyaTokenizer(object):
             story = story_input + ' [SEP] ' + story_output
 
             # Divide the story into chunks of max_length tokens
-            story_chunks = [story[i:i + max_length - 12] for i in range(0, len(story), max_length - 12)]
+            story_chunks = [story[i:i + max_length] for i in range(0, len(story), max_length)]
 
             # Encode the chunks
             for chunk in story_chunks:
                 # Concatenate the input and output chunks with a [SEP] token in between
-                chunk = '[CLS] ' + chunk if not chunk.startswith('[CLS] ') else chunk
-                chunk = chunk + ' [SEP]' if not chunk.endswith(' [SEP]') else chunk
-
+                # chunk = '[CLS] ' + chunk if not chunk.startswith('[CLS] ') else chunk
+                # chunk = chunk + ' [SEP]' if not chunk.endswith(' [SEP]') else chunk
                 tokenized_sequence = encode(self.tokenizer, chunk)
                 # Check the length of the tokenized sequence
                 tokenized_data.append(tokenized_sequence)

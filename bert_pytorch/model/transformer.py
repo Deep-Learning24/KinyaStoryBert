@@ -3,6 +3,7 @@ import torch.nn as nn
 from .attention import MultiHeadedAttention
 from .utils import SublayerConnection, PositionwiseFeedForward
 
+import logging
 
 class TransformerBlock(nn.Module):
     """
@@ -26,6 +27,21 @@ class TransformerBlock(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, mask):
-        x = self.input_sublayer(x, lambda _x: self.attention.forward(_x, _x, _x, mask=mask))
-        x = self.output_sublayer(x, self.feed_forward)
-        return self.dropout(x)
+        logging.info(f'Entering TransformerBlock forward method')
+        logging.info(f'x shape: {x.shape}, mask shape: {mask.shape}')
+
+        try:
+            logging.info('Applying input sublayer and attention')
+            x = self.input_sublayer(x, lambda _x: self.attention.forward(_x, _x, _x, mask=mask))
+
+            logging.info('Applying output sublayer and feed forward')
+            x = self.output_sublayer(x, self.feed_forward)
+
+            logging.info('Applying dropout')
+            x = self.dropout(x)
+
+            logging.info('Returning from TransformerBlock forward method')
+            return x
+        except Exception as e:
+            logging.error(f'Error in TransformerBlock forward: {e}')
+            raise

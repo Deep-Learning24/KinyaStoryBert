@@ -1,89 +1,77 @@
-'''
-    code by TaeHwan Jung(@graykode)
-    Original Paper and repository here : https://github.com/openai/gpt-2
-    GPT2 Pytorch Model : https://github.com/huggingface/pytorch-pretrained-BERT
-'''
 import argparse
-import os
-import random
+
+from torch.utils.data import DataLoader
 import sys
+sys.path.append('../')
+from model import BERT
+from trainer import KinyaStoryBERTTrainer
+from dataset.Kinya_storydataset import KinyaStoryBertDataset
+from transformers import AutoTokenizer
 
-import numpy as np
-import torch
-
-from GPT2.config import KinyaGPT2Config
-
-from GPT2.model import (GPT2LMHeadModel)
-from GPT2.sample import sample_sequence
-from GPT2.utils import load_weight
-from tokenizer_utils import handel_decode, handel_encode,tokenizer
-
-
-def text_generator(state_dict):
+def train():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--text", type=str, required=True)
-    parser.add_argument("--quiet", type=bool, default=False)
-    parser.add_argument("--nsamples", type=int, default=1)
-    parser.add_argument('--unconditional', action='store_true', help='If true, unconditional generation.')
-    parser.add_argument("--batch_size", type=int, default=-1)
-    parser.add_argument("--length", type=int, default=-1)
-    parser.add_argument("--temperature", type=float, default=0.7)
-    parser.add_argument("--top_k", type=int, default=40)
+
+    parser.add_argument("-c", "--train_dataset", required=True,default="tokenized_data.pt", type=str, help="train dataset for train bert")
+    parser.add_argument("-t", "--test_dataset", type=str, default=None, help="test set for evaluate train set")
+    parser.add_argument("-o", "--output_path", required=True, type=str, help="ex)output/bert.model")
+
+    parser.add_argument("-hs", "--hidden", type=int, default=256, help="hidden size of transformer model")
+    parser.add_argument("-l", "--layers", type=int, default=8, help="number of layers")
+    parser.add_argument("-a", "--attn_heads", type=int, default=8, help="number of attention heads")
+    parser.add_argument("-s", "--seq_len", type=int, default=20, help="maximum sequence len")
+
+    parser.add_argument("-b", "--batch_size", type=int, default=64, help="number of batch_size")
+    parser.add_argument("-e", "--epochs", type=int, default=10, help="number of epochs")
+    parser.add_argument("-w", "--num_workers", type=int, default=5, help="dataloader worker size")
+
+    parser.add_argument("--with_cuda", type=bool, default=True, help="training with CUDA: true, or false")
+    parser.add_argument("--log_freq", type=int, default=10, help="printing loss every n iter: setting n")
+    parser.add_argument("--corpus_lines", type=int, default=None, help="total number of lines in corpus")
+    parser.add_argument("--cuda_devices", type=int, nargs='+', default=None, help="CUDA device ids")
+    parser.add_argument("--on_memory", type=bool, default=True, help="Loading on memory: true or false")
+
+    parser.add_argument("--lr", type=float, default=1e-3, help="learning rate of adam")
+    parser.add_argument("--adam_weight_decay", type=float, default=0.01, help="weight_decay of adam")
+    parser.add_argument("--adam_beta1", type=float, default=0.9, help="adam first beta value")
+    parser.add_argument("--adam_beta2", type=float, default=0.999, help="adam first beta value")
+
     args = parser.parse_args()
+    tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=512)
 
-    if args.quiet is False:
-        print(args)
+    vocab = tokenizer.get_vocab()
 
-    if args.batch_size == -1:
-        args.batch_size = 1
-    assert args.nsamples % args.batch_size == 0
+    print("Vocab Size: ", len(vocab))
 
-    seed = random.randint(0, 2147483647)
-    np.random.seed(seed)
-    torch.random.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("Loading Train Dataset", args.train_dataset)
+    train_dataset = KinyaStoryBertDataset(vocab, seq_len=args.seq_len, tokenized_data_file_path=args.train_dataset)
+    print("Train Dataset Size: ", len(train_dataset))
 
-    # Load Model
-    config = KinyaGPT2Config(tokenizer=tokenizer)
-    model = GPT2LMHeadModel(config)
-    model = load_weight(model, state_dict)
-    model.to(device)
-    model.eval()
+    print("Loading Test Dataset", args.test_dataset)
+    test_dataset = KinyaStoryBertDataset(vocab, seq_len=args.seq_len, tokenized_data_file_path=args.test_dataset) \
+        if args.test_dataset is not None else None
 
-    if args.length == -1:
-        args.length = config.n_ctx // 2
-    elif args.length > config.n_ctx:
-        raise ValueError("Can't get samples longer than window size: %s" % config.n_ctx)
+    print("Creating Dataloader")
+    train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers)
+    print("Train DataLoader Size: ", len(train_data_loader))
 
-    print(args.text)
-    context_tokens = handel_encode(args.text)[0]
+    test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size, num_workers=args.num_workers) \
+        if test_dataset is not None else None
 
-    generated = 0
-    start_token = tokenizer.encode("<|endoftext|>")[0]
-    for _ in range(args.nsamples // args.batch_size):
-        out = sample_sequence(
-            model=model, length=args.length,
-            context=context_tokens if not args.unconditional else None,
-            start_token=start_token if args.unconditional else None,
-            batch_size=args.batch_size,
-            temperature=args.temperature, top_k=args.top_k, device=device
-        )
-        out = out[:, len(context_tokens):].tolist()
-        #print(out)
-        for i in range(args.batch_size):
-            generated += 1
-            text = handel_decode(out[i])
-            if args.quiet is False:
-                print("=" * 40 + " SAMPLE " + str(generated) + " " + "=" * 40)
-            print(text)
+    print("Building BERT model")
+    bert = BERT(len(vocab), hidden=args.hidden, n_layers=args.layers, attn_heads=args.attn_heads)
 
+    print("Creating BERT Trainer")
+    trainer = KinyaStoryBERTTrainer(bert, len(vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader,
+                          lr=args.lr, betas=(args.adam_beta1, args.adam_beta2), weight_decay=args.adam_weight_decay,
+                          with_cuda=args.with_cuda, cuda_devices=args.cuda_devices, log_freq=args.log_freq)
 
-if __name__ == '__main__':
-    if os.path.exists('gpt2_story_generator.pth'):
-        state_dict = torch.load('gpt2_story_generator.pth',
-                                map_location='cpu' if not torch.cuda.is_available() else None)
-        text_generator(state_dict)
-    else:
-        print('Please train the model first. Run train.py to train the model.')
-        sys.exit()
+    print("Training Start")
+    for epoch in range(args.epochs):
+        trainer.train(epoch)
+        trainer.save(epoch, args.output_path)
+
+        if test_data_loader is not None:
+            trainer.test(epoch)
+
+if __name__ == "__main__":
+    train()
