@@ -26,8 +26,13 @@ class KinyaStoryBertDataset(Dataset):
         padding = [self.vocab["[PAD]"] for _ in range(self.seq_len - len(bert_input))]
         bert_input.extend(padding), bert_label.extend(padding), segment_label.extend(padding)
     
+        # Generate is_next label
+        # Assuming tokenized_sequence[2] is a boolean indicating whether the second sentence is the next sentence
+        is_next = [1] if tokenized_sequence[2] else [0]
+    
         output = {"bert_input": bert_input,
                   "bert_label": bert_label,
-                  "segment_label": segment_label}
+                  "segment_label": segment_label,
+                  "is_next": is_next}
     
         return {key: torch.tensor(value) for key, value in output.items()}

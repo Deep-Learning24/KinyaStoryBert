@@ -1,4 +1,5 @@
 import json
+import random
 from transformers import AutoTokenizer
 import torch
 import os
@@ -91,24 +92,31 @@ class KinyaTokenizer(object):
         for _, row in df.iterrows():
             story_input = str(row['story_input'])
             story_output = str(row['story_output'])
-
+    
+            # Decide whether the story_output is the actual next sentence or a random sentence
+            if random.random() < 0.5:
+                # The story_output is the next sentence
+                is_next = 1
+            else:
+                # The story_output is a random sentence
+                story_output = df.sample(n=1)['story_output'].values[0]
+                is_next = 0
+    
             story = story_input + ' [SEP] ' + story_output
-
+    
             # Divide the story into chunks of max_length tokens
             story_chunks = [story[i:i + max_length] for i in range(0, len(story), max_length)]
-
+    
             # Encode the chunks
             for chunk in story_chunks:
-                # Concatenate the input and output chunks with a [SEP] token in between
-                # chunk = '[CLS] ' + chunk if not chunk.startswith('[CLS] ') else chunk
-                # chunk = chunk + ' [SEP]' if not chunk.endswith(' [SEP]') else chunk
                 tokenized_sequence = encode(self.tokenizer, chunk)
-                # Check the length of the tokenized sequence
+                # Append the is_next label to the tokenized sequence
+                tokenized_sequence = (tokenized_sequence[0], tokenized_sequence[1], is_next)
                 tokenized_data.append(tokenized_sequence)
-
+    
         # Save the tokenized data
         torch.save(tokenized_data, 'tokenized_data.pt')
-
+    
         return tokenized_data
 
     def print_sample_tokenized_data(self, tokenized_data):
@@ -121,7 +129,7 @@ class KinyaTokenizer(object):
         for tokenized_sequence in tokenized_data:
             # Check the shape of the tokenized sequence
             print("The type of the tokenized data is:", type(tokenized_sequence))
-            input_ids, attention_mask = tokenized_sequence  # Unpack the tuple
+            input_ids, attention_mask,_ = tokenized_sequence  # Unpack the tuple
 
             decoded_sequence = decode(self.tokenizer, input_ids)
             print(decoded_sequence)
@@ -133,10 +141,11 @@ if __name__ == "__main__":
     KinyaTokenizer = KinyaTokenizer('kinyastory_data/kinyastory.csv')
     tokenized_data = KinyaTokenizer.tokenize_dataset()
     print("Tokenized data saved as tokenized_data.pt")
-    first_input_ids,first_input_masks = tokenized_data[0]
+    first_input_ids,first_input_masks,is_next = tokenized_data[0]
     print(first_input_ids)
     print("Length of the input_ids:", len(first_input_ids))
     print(first_input_masks)
     print("Length of the attention_mask:", len(first_input_masks))
+    print("is_next:", is_next)
     KinyaTokenizer.print_sample_tokenized_data(tokenized_data[:10])
     print("Sample tokenized data printed")

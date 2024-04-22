@@ -24,26 +24,26 @@ class MultiHeadedAttention(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, query, key, value, mask=None):
-        logging.info(f'Entering MultiHeadedAttention forward method')
-        logging.info(f'query shape: {query.shape}, key shape: {key.shape}, value shape: {value.shape}, mask shape: {mask.shape if mask is not None else "None"}')
+        #logging.info(f'Entering MultiHeadedAttention forward method')
+        #logging.info(f'query shape: {query.shape}, key shape: {key.shape}, value shape: {value.shape}, mask shape: {mask.shape if mask is not None else "None"}')
 
         try:
             batch_size = query.size(0)
 
             # 1) Do all the linear projections in batch from d_model => h x d_k
-            logging.info('Applying linear projections')
+            #logging.info('Applying linear projections')
             query, key, value = [l(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
                                  for l, x in zip(self.linear_layers, (query, key, value))]
 
             # 2) Apply attention on all the projected vectors in batch.
-            logging.info('Applying attention')
+            #logging.info('Applying attention')
             x, attn = self.attention(query, key, value, mask=mask, dropout=self.dropout)
 
             # 3) "Concat" using a view and apply a final linear.
-            logging.info('Concatenating and applying final linear')
+            #logging.info('Concatenating and applying final linear')
             x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
 
-            logging.info('Returning from MultiHeadedAttention forward method')
+            #logging.info('Returning from MultiHeadedAttention forward method')
             return self.output_linear(x)
         except Exception as e:
             logging.error(f'Error in MultiHeadedAttention forward: {e}')

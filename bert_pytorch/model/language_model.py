@@ -23,16 +23,16 @@ class BERTLM(nn.Module):
         self.mask_lm = MaskedLanguageModel(self.bert.hidden, vocab_size)
 
     def forward(self, x, segment_label):
-        logging.info(f'Entering BERTLM forward method')
-        logging.info(f'x shape: {x.shape}, segment_label shape: {segment_label.shape}')
+        # logging.info(f'Entering BERTLM forward method')
+        # logging.info(f'x shape: {x.shape}, segment_label shape: {segment_label.shape}')
         
         try:
             x = self.bert(x, segment_label)
-            logging.info(f'Output of BERT forward method shape: {x.shape}')
+            #logging.info(f'Output of BERT forward method shape: {x.shape}')
             
             return self.next_sentence(x), self.mask_lm(x)
         except Exception as e:
-            logging.error(f'Error in BERTLM forward: {e}')
+            #logging.error(f'Error in BERTLM forward: {e}')
             raise
 
 
