@@ -26,7 +26,7 @@ class KinyaStoryBERTTrainer:
     def __init__(self, bert: BERT, vocab_size: int,
                  train_dataloader: DataLoader, test_dataloader: DataLoader = None,
                  lr: float = 1e-4, betas=(0.9, 0.999), weight_decay: float = 0.01, warmup_steps=10000,
-                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10, wandb_project_name="project-ablations",model_file_path="output/bert_trained.model",last_saved_epoch=None):
+                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10, wandb_project_name="project-ablations",model_file_path="output/bert.model",last_saved_epoch=None):
         """
         :param bert: BERT model which you want to train
         :param vocab_size: total word vocab size
@@ -105,7 +105,8 @@ class KinyaStoryBERTTrainer:
             id ="kinya-bert-training", ### Insert specific run id here if you want to resume a previous run
             #resume = "must", ### You need this to resume previous runs, but comment out reinit = True when using this
             )
-
+        self.best_loss = 1000000
+        self.should_save = False
 
     def train(self, epoch):
         
@@ -177,6 +178,13 @@ class KinyaStoryBERTTrainer:
                 "loss": loss.item()
             }
 
+            if avg_loss / (i + 1) < self.best_loss:
+                self.best_loss = avg_loss / (i + 1)
+                self.should_save = True
+            else:
+                self.should_save = False
+                
+
             
 
             if i % self.log_freq == 0:
@@ -195,6 +203,9 @@ class KinyaStoryBERTTrainer:
         :param file_path: model output path which gonna be file_path+"ep%d" % epoch
         :return: final_output_path
         """
+        if not self.should_save:
+            print("Not saving model")
+            return None
         output_path = file_path + ".ep%d" % epoch
 
         
