@@ -9,35 +9,63 @@ from dataset.Kinya_storydataset import KinyaStoryBertDataset
 from transformers import AutoTokenizer
 import os
 from KinyaTokenizer import KinyaTokenizer, encode, decode
-
+from tqdm import tqdm
 class BERTInference:
     def __init__(self, model, tokenizer, device='cpu'):
         self.model = model
         self.tokenizer = tokenizer
         self.device = device
 
-    def generate_text(self, starting_text, max_length=512):
-        input_ids = encode(self.tokenizer, starting_text)[0]
-        generated = torch.tensor(input_ids).unsqueeze(0)
-        generated = generated.to(self.device)
+    def generate_text(self, starting_text, max_length=128):
+        try:
+            print("Encoding input text...")
+            input_ids = encode(self.tokenizer, starting_text)[0]
+            input_ids = [self.vocab["[CLS]"]] + input_ids + [self.vocab["[SEP]"]]
+    
+            segment_label = [1 for _ in range(len(input_ids))]
+    
+            print("Creating tensors...")
+            generated = torch.tensor(input_ids).unsqueeze(0)
+            generated = generated.to(self.device)
+            segment_label = torch.tensor(segment_label).unsqueeze(0).to(self.device)
+    
+            print("Setting model to eval mode...")
+            self.model.eval()
+    
+            with torch.no_grad():
+                for _ in tqdm(range(max_length)):
+                    # print("Running forward pass...")
+                    # print(f"Shape of generated:  {generated.shape}")
+                    # print(f"Shape of the segment labels: {segment_label.shape}")
+    
+                    predictions = self.model.forward(generated, segment_label)
+                    predictions = predictions[1].squeeze(0).to(self.device)
+                    # print("Predictions: ", predictions)
+                    # print("Getting next word...")
+                    next_word = torch.argmax(predictions[-1, :], dim=-1).unsqueeze(0)
+    
+                    if next_word.item() == encode(self.tokenizer, '[SEP]')[0]:
+                        print(f"Got stuck here at {next_word.item()} ")
+                        break
+    
+                    # print("Updating generated and segment_label...")
+                    # print(f"Found next token: {next_word}")
+    
+                    # Add the next word to the end of generated
+                    generated = torch.cat((generated, next_word.unsqueeze(0)), dim=1)
+                    # If the length of generated exceeds max_length, remove the first token
+                    if generated.size(1) > max_length:
+                        generated = generated[:, 1:]
+    
+                    #print(decode(self.tokenizer, generated.squeeze().tolist()))
+    
+            print("Decoding generated text...")
+            return decode(self.tokenizer, generated.squeeze().tolist())
+        except Exception as e:
+            print(f"Error generating text: {e}")
+        return None
 
-        self.model.eval()
-
-        with torch.no_grad():
-            for _ in range(max_length):
-                predictions = self.model(generated, None)
-                # we will just use the Masked Language Model for prediction
-                predictions = predictions[1].squeeze(0).to(self.device)
-
-                # get the predicted next sub-word (in our case, the word)
-                next_word = torch.argmax(predictions[-1, :], dim=-1).unsqueeze(0)
-
-                if next_word.item() == self.tokenizer.encode(['[SEP]'])[0]:
-                    break
-
-                generated = torch.cat((generated, next_word.unsqueeze(0)), dim=1)
-
-        return decode(generated.squeeze().tolist())
+     
         
 def main():
     parser = argparse.ArgumentParser()
