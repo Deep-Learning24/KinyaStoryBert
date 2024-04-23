@@ -91,6 +91,7 @@ class KinyaStoryBERTTrainer:
             "model": "BERT",
             "model Parameters": sum([p.nelement() for p in self.model.parameters()])
         }
+        self.load_model()
 
         logging.info(f'Initialized BERT trainer with cuda: {cuda_condition}, device: {self.device}')
         logging.info(f'Total Parameters: {sum([p.nelement() for p in self.model.parameters()])}')
@@ -107,7 +108,7 @@ class KinyaStoryBERTTrainer:
 
 
     def train(self, epoch):
-        self.load_model()
+        
         self.iteration(epoch, self.train_data)
 
     def test(self, epoch):
@@ -206,10 +207,10 @@ class KinyaStoryBERTTrainer:
     
     def load_model(self):
         if self.model_path is None:
-            print("Model path not set")
+            print(f"Model path {self.model_path} is None, not loading model")
             return None
         if not os.path.exists(self.model_path):
-            print("Model file not found")
+            print(f"Model file {self.model_path} not found")
             return None
         self.model.load_state_dict(torch.load(self.model_path))
         self.model.to(self.device)
