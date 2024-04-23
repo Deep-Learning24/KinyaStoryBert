@@ -122,11 +122,12 @@ class KinyaTokenizer(object):
     
             # Save the tokenized data
             torch.save(tokenized_data, filename)
+            return tokenized_data
     
-        tokenize_and_save(train_df, 'tokenized_train_data.pt')
-        tokenize_and_save(val_df, 'tokenized_val_data.pt')
+        tokenized_train_data = tokenize_and_save(train_df, 'tokenized_train_data.pt')
+        tokenized_val_data = tokenize_and_save(val_df, 'tokenized_val_data.pt')
     
-        return tokenized_data
+        return tokenized_train_data, tokenized_val_data
 
     def print_sample_tokenized_data(self, tokenized_data):
         # Check the type of the tokenized data
@@ -148,7 +149,7 @@ class KinyaTokenizer(object):
 
 if __name__ == "__main__":
     KinyaTokenizer = KinyaTokenizer('kinyastory_data/kinyastory.csv')
-    tokenized_data = KinyaTokenizer.tokenize_dataset()
+    tokenized_data,_ = KinyaTokenizer.tokenize_dataset()
     print("Tokenized data saved as tokenized_data.pt")
     first_input_ids,first_input_masks,is_next = tokenized_data[0]
     print(first_input_ids)
