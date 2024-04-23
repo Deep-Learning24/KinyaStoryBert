@@ -15,7 +15,7 @@ def train():
     parser.add_argument("-c", "--train_dataset", required=True,default="tokenized_data.pt", type=str, help="train dataset for train bert")
     parser.add_argument("-t", "--test_dataset", type=str, default=None, help="test set for evaluate train set")
     parser.add_argument("-o", "--output_path", required=True, type=str, help="ex)output/bert.model")
-    parser.add_argument("-p", "--last_saved_epoch", type=str, default=None, help="epoch of last saved model")
+    parser.add_argument("-p", "--last_saved_epoch", type=int, default=None, help="epoch of last saved model")
 
     parser.add_argument("-hs", "--hidden", type=int, default=256, help="hidden size of transformer model")
     parser.add_argument("-l", "--layers", type=int, default=8, help="number of layers")
