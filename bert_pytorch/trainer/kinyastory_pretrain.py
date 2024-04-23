@@ -244,9 +244,19 @@ class KinyaStoryBERTTrainer:
         bert = bert
         # Initialize the BERT Language Model, with BERT model
         model = BERTLM(bert,vocab_size).to(device)
+       
+        model_path = "output/bert.model" + ".ep%d" % epoch
+
+        if not os.path.exists(model_path):
+            print(f"Model file {model_path} not found")
+            return None
         
         # Load the model initial dict state
-        state_dict = torch.load("output/bert.model.ep%d" % epoch)
+        state_dict = torch.load(model_path)
+        if not isinstance(state_dict, dict):
+            print(f"Invalid state_dict in {model_path}")
+            return None
+        
         model.load_state_dict(state_dict)
         model.to(device)
         return model
