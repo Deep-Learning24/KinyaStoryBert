@@ -7,6 +7,7 @@ from model import BERT
 from trainer import KinyaStoryBERTTrainer
 from dataset.Kinya_storydataset import KinyaStoryBertDataset
 from transformers import AutoTokenizer
+import os
 
 def train():
     parser = argparse.ArgumentParser()
@@ -66,6 +67,10 @@ def train():
                           with_cuda=args.with_cuda, cuda_devices=args.cuda_devices, log_freq=args.log_freq)
 
     print("Training Start")
+    #Create output directory if it doesn't exist
+    
+    if not os.path.exists(args.output_path):
+        os.makedirs(args.output_path)
     for epoch in range(args.epochs):
         trainer.train(epoch)
         trainer.save(epoch, args.output_path)
