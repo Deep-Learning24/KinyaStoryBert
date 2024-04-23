@@ -208,9 +208,9 @@ class KinyaStoryBERTTrainer:
             return None
         output_path = file_path + ".ep%d" % epoch
     
-        torch.save(self.bert.cpu().state_dict(), output_path)
+        torch.save(self.model.cpu().state_dict(), output_path)
         wandb.save(output_path)
-        self.bert.to(self.device)
+        self.model.to(self.device)
         print("EP:%d Model Saved on:" % epoch, output_path)
         return output_path
     
@@ -225,7 +225,12 @@ class KinyaStoryBERTTrainer:
         if not isinstance(state_dict, dict):
             print(f"Invalid state_dict in {self.model_path}")
             return None
-        self.model.load_state_dict(state_dict)
-        self.model.to(self.device)
-        print("Model loaded from", self.model_path)
+        try:
+            self.model.load_state_dict(state_dict)
+            self.model.to(self.device)
+            print("Model loaded from", self.model_path)
+        except Exception as e:
+            print(f"Error loading model: {e}")
+            return None
+        
         return self.model
