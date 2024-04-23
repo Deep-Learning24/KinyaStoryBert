@@ -198,7 +198,7 @@ class KinyaStoryBERTTrainer:
     def save(self, epoch, file_path="output/bert_trained.model"):
         """
         Saving the current BERT model on file_path
-
+    
         :param epoch: current epoch number
         :param file_path: model output path which gonna be file_path+"ep%d" % epoch
         :return: final_output_path
@@ -207,10 +207,8 @@ class KinyaStoryBERTTrainer:
             print("Not saving model")
             return None
         output_path = file_path + ".ep%d" % epoch
-
-        
-
-        torch.save(self.bert.cpu(), output_path)
+    
+        torch.save(self.bert.cpu().state_dict(), output_path)
         wandb.save(output_path)
         self.bert.to(self.device)
         print("EP:%d Model Saved on:" % epoch, output_path)
@@ -223,7 +221,11 @@ class KinyaStoryBERTTrainer:
         if not os.path.exists(self.model_path):
             print(f"Model file {self.model_path} not found")
             return None
-        self.model = torch.load(self.model_path)
+        state_dict = torch.load(self.model_path)
+        if not isinstance(state_dict, dict):
+            print(f"Invalid state_dict in {self.model_path}")
+            return None
+        self.model.load_state_dict(state_dict)
         self.model.to(self.device)
         print("Model loaded from", self.model_path)
         return self.model
