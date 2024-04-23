@@ -145,17 +145,17 @@ class KinyaStoryBERTTrainer:
             #print("next_sent_output", next_sent_output.shape, data["is_next"].shape)
             next_loss = self.criterion(next_sent_output, data["is_next"].squeeze())
 
-            wandb.log({"next_loss": next_loss.item()})
+            
 
             # 2-2. NLLLoss of predicting masked token word
             mask_loss = self.criterion(mask_lm_output.transpose(1, 2), data["bert_label"])
 
-            wandb.log({"mask_loss": mask_loss.item()})
+            
 
             # 2-3. Adding next_loss and mask_loss : 3.4 Pre-training Procedure
             loss = next_loss + mask_loss
 
-            wandb.log({"total_loss": loss.item()})
+           
 
             # 3. backward and optimization only in train
             if train:
@@ -177,7 +177,7 @@ class KinyaStoryBERTTrainer:
                 "loss": loss.item()
             }
 
-            wandb.log(post_fix)
+            
 
             if i % self.log_freq == 0:
                 data_iter.write(str(post_fix))
