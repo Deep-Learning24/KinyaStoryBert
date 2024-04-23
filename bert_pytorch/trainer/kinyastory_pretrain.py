@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -25,7 +26,7 @@ class KinyaStoryBERTTrainer:
     def __init__(self, bert: BERT, vocab_size: int,
                  train_dataloader: DataLoader, test_dataloader: DataLoader = None,
                  lr: float = 1e-4, betas=(0.9, 0.999), weight_decay: float = 0.01, warmup_steps=10000,
-                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10):
+                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10, wandb_project_name="project-ablations",model_file_path="output/bert_trained.model",last_saved_epoch=None):
         """
         :param bert: BERT model which you want to train
         :param vocab_size: total word vocab size
@@ -56,6 +57,8 @@ class KinyaStoryBERTTrainer:
         self.train_data = train_dataloader
         self.test_data = test_dataloader
 
+        self.last_saved_epoch = last_saved_epoch
+
         # Setting the Adam optimizer with hyper-param
         self.optim = Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
         self.optim_schedule = ScheduledOptim(self.optim, self.bert.hidden, n_warmup_steps=warmup_steps)
@@ -64,6 +67,11 @@ class KinyaStoryBERTTrainer:
         self.criterion = nn.NLLLoss(ignore_index=0)
 
         self.log_freq = log_freq
+
+        self.model_path = None
+
+        if last_saved_epoch is not None:
+            self.model_path = model_file_path + ".ep%d" % last_saved_epoch
 
         print("Total Parameters:", sum([p.nelement() for p in self.model.parameters()]))
         logging.basicConfig(level=logging.INFO)
@@ -89,7 +97,7 @@ class KinyaStoryBERTTrainer:
         wandb.login(key="3644f3d76a394594794c1b136a20f75303e871ba")
 
         wandb.init(
-            project="project-ablations", 
+            project=wandb_project_name, 
             config=self.config,
             name = "kinya-bert-training", ## Wandb creates random run names if you skip this field
             reinit = True, ### Allows reinitalizing runs when you re-run this cell
@@ -99,6 +107,7 @@ class KinyaStoryBERTTrainer:
 
 
     def train(self, epoch):
+        self.load_model()
         self.iteration(epoch, self.train_data)
 
     def test(self, epoch):
@@ -186,8 +195,23 @@ class KinyaStoryBERTTrainer:
         :return: final_output_path
         """
         output_path = file_path + ".ep%d" % epoch
+
+        
+
         torch.save(self.bert.cpu(), output_path)
         wandb.save(output_path)
         self.bert.to(self.device)
         print("EP:%d Model Saved on:" % epoch, output_path)
         return output_path
+    
+    def load_model(self):
+        if self.model_path is None:
+            print("Model path not set")
+            return None
+        if not os.path.exists(self.model_path):
+            print("Model file not found")
+            return None
+        self.model.load_state_dict(torch.load(self.model_path))
+        self.model.to(self.device)
+        print("Model loaded from", self.model_path)
+        return self.model
