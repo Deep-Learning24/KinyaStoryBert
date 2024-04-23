@@ -223,7 +223,7 @@ class KinyaStoryBERTTrainer:
         if not os.path.exists(self.model_path):
             print(f"Model file {self.model_path} not found")
             return None
-        self.model.load_state_dict(torch.load(self.model_path))
+        self.model = torch.load(self.model_path)
         self.model.to(self.device)
         print("Model loaded from", self.model_path)
         return self.model
