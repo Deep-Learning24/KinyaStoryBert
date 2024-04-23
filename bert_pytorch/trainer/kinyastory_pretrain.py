@@ -239,9 +239,9 @@ class KinyaStoryBERTTrainer:
         return self.model
     
     @staticmethod
-    def load_model_from_path(epoch,vocab_size,device="cpu"):
+    def load_model_from_path(epoch,vocab_size,bert,device="cpu"):
         # This BERT model will be saved every epoch
-        bert = BERT
+        bert = bert
         # Initialize the BERT Language Model, with BERT model
         model = BERTLM(bert,vocab_size).to(device)
         

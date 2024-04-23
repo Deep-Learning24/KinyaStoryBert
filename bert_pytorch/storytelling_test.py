@@ -44,10 +44,16 @@ def main():
     parser.add_argument("-m", "--epoch", required=True, type=int, help="epoch of the model to load")
     parser.add_argument("-d", "--device", type=str, default='cpu', help="device to run the model on")
     parser.add_argument("-t", "--text", required=True, type=str, help="starting text for the story")
+    parser.add_argument("-hs", "--hidden", type=int, default=256, help="hidden size of transformer model")
+    parser.add_argument("-l", "--layers", type=int, default=8, help="number of layers")
+    parser.add_argument("-a", "--attn_heads", type=int, default=8, help="number of attention heads")
+    parser.add_argument("-s", "--seq_len", type=int, default=128, help="maximum sequence len")
+
     args = parser.parse_args()
     tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
     vocab = tokenizer.get_vocab()
-    model = KinyaStoryBERTTrainer.load_model_from_path(epoch=args.epoch, vocab_size=len(vocab), device=args.device)
+    bert = BERT(len(vocab), hidden=args.hidden, n_layers=args.layers, attn_heads=args.attn_heads)
+    model = KinyaStoryBERTTrainer.load_model_from_path(epoch=args.epoch, vocab_size=len(vocab),bert=bert, device=args.device)
     bert_inference = BERTInference(model, tokenizer, device=args.device)
     print(bert_inference.generate_text(args.text))
 
