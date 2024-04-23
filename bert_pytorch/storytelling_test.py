@@ -50,3 +50,6 @@ def main():
     model = KinyaStoryBERTTrainer.load_model_from_path(epoch=args.epoch, vocab_size=len(vocab), device=args.device)
     bert_inference = BERTInference(model, tokenizer, device=args.device)
     print(bert_inference.generate_text(args.text))
+
+if __name__ == '__main__':
+    main()
