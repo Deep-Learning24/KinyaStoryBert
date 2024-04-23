@@ -15,6 +15,7 @@ class BERTInference:
         self.model = model
         self.tokenizer = tokenizer
         self.device = device
+        self.vocab = tokenizer.get_vocab()
 
     def generate_text(self, starting_text, max_length=128):
         try:
