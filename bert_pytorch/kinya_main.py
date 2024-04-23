@@ -20,7 +20,7 @@ def train():
     parser.add_argument("-hs", "--hidden", type=int, default=256, help="hidden size of transformer model")
     parser.add_argument("-l", "--layers", type=int, default=8, help="number of layers")
     parser.add_argument("-a", "--attn_heads", type=int, default=8, help="number of attention heads")
-    parser.add_argument("-s", "--seq_len", type=int, default=20, help="maximum sequence len")
+    parser.add_argument("-s", "--seq_len", type=int, default=128, help="maximum sequence len")
 
     parser.add_argument("-b", "--batch_size", type=int, default=64, help="number of batch_size")
     parser.add_argument("-e", "--epochs", type=int, default=10, help="number of epochs")
@@ -38,7 +38,7 @@ def train():
     parser.add_argument("--adam_beta2", type=float, default=0.999, help="adam first beta value")
 
     args = parser.parse_args()
-    tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=512)
+    tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
 
     vocab = tokenizer.get_vocab()
 

@@ -18,7 +18,7 @@ def encode(tokenizer, text):
         text,
         truncation=True,
         padding='max_length',
-        max_length=512,
+        max_length=128,
         return_attention_mask=True,
     )
     return encoding['input_ids'], encoding['attention_mask']
@@ -36,7 +36,7 @@ def decode(tokenizer, encoded_tokens, skip_special_tokens=True):
 
 class KinyaTokenizer(object):
     def __init__(self, dataset_path):
-        self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=512)
+        self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
         self.dataset_path = dataset_path
         # self.extend_vocab()
 
@@ -89,7 +89,7 @@ class KinyaTokenizer(object):
             json.dump(tokenizer_config, f)
 
     
-    def tokenize_dataset(self, max_length=512, validation_split=0.1):
+    def tokenize_dataset(self, max_length=128, validation_split=0.1):
         df = pd.read_csv(self.dataset_path)
         train_df, val_df = train_test_split(df, test_size=validation_split, random_state=42)
     
