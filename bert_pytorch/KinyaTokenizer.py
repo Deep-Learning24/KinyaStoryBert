@@ -12,7 +12,6 @@ import time
 
 from sklearn.model_selection import train_test_split
 
-
 def encode(tokenizer, text):
     encoding = tokenizer.encode_plus(
         text,

@@ -63,6 +63,9 @@ class KinyaStoryBERTTrainer:
         self.optim = Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
         self.optim_schedule = ScheduledOptim(self.optim, self.bert.hidden, n_warmup_steps=warmup_steps)
 
+        #Save the model's state dict
+        torch.save(self.model.state_dict(), "output/model_state_dict.pth")
+
         # Using Negative Log Likelihood Loss function for predicting the masked_token
         self.criterion = nn.NLLLoss(ignore_index=0)
 
@@ -101,9 +104,9 @@ class KinyaStoryBERTTrainer:
             project=wandb_project_name, 
             config=self.config,
             name = "kinya-bert-training", ## Wandb creates random run names if you skip this field
-            reinit = True, ### Allows reinitalizing runs when you re-run this cell
+            #reinit = True, ### Allows reinitalizing runs when you re-run this cell
             id ="kinya-bert-training", ### Insert specific run id here if you want to resume a previous run
-            #resume = "must", ### You need this to resume previous runs, but comment out reinit = True when using this
+            resume = "must", ### You need this to resume previous runs, but comment out reinit = True when using this
             )
         self.best_loss = 1000000
         self.should_save = False
@@ -234,3 +237,17 @@ class KinyaStoryBERTTrainer:
             return None
         
         return self.model
+    
+    @staticmethod
+    def load_model_from_path(epoch,vocab_size,device="cpu"):
+        # This BERT model will be saved every epoch
+        bert = BERT
+        # Initialize the BERT Language Model, with BERT model
+        model = BERTLM(bert,vocab_size).to(device)
+        
+        # Load the model initial dict state
+        state_dict = torch.load("output/bert.model.ep%d" % epoch)
+        model.load_state_dict(state_dict)
+        model.to(device)
+        return model
+        
