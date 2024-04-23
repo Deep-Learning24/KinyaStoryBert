@@ -10,6 +10,8 @@ from multiprocessing import Pool
 from tqdm import tqdm
 import time
 
+from sklearn.model_selection import train_test_split
+
 
 def encode(tokenizer, text):
     encoding = tokenizer.encode_plus(
@@ -86,36 +88,43 @@ class KinyaTokenizer(object):
         with open('tokenizer_config.json', 'w') as f:
             json.dump(tokenizer_config, f)
 
-    def tokenize_dataset(self, max_length=512):
+    
+    def tokenize_dataset(self, max_length=512, validation_split=0.1):
         df = pd.read_csv(self.dataset_path)
-        tokenized_data = []
-        for _, row in df.iterrows():
-            story_input = str(row['story_input'])
-            story_output = str(row['story_output'])
+        train_df, val_df = train_test_split(df, test_size=validation_split, random_state=42)
     
-            # Decide whether the story_output is the actual next sentence or a random sentence
-            if random.random() < 0.5:
-                # The story_output is the next sentence
-                is_next = 1
-            else:
-                # The story_output is a random sentence
-                story_output = df.sample(n=1)['story_output'].values[0]
-                is_next = 0
+        def tokenize_and_save(df, filename):
+            tokenized_data = []
+            for _, row in df.iterrows():
+                story_input = str(row['story_input'])
+                story_output = str(row['story_output'])
     
-            story = story_input + ' [SEP] ' + story_output
+                # Decide whether the story_output is the actual next sentence or a random sentence
+                if random.random() < 0.5:
+                    # The story_output is the next sentence
+                    is_next = 1
+                else:
+                    # The story_output is a random sentence
+                    story_output = df.sample(n=1)['story_output'].values[0]
+                    is_next = 0
     
-            # Divide the story into chunks of max_length tokens
-            story_chunks = [story[i:i + max_length] for i in range(0, len(story), max_length)]
+                story = story_input + ' [SEP] ' + story_output
     
-            # Encode the chunks
-            for chunk in story_chunks:
-                tokenized_sequence = encode(self.tokenizer, chunk)
-                # Append the is_next label to the tokenized sequence
-                tokenized_sequence = (tokenized_sequence[0], tokenized_sequence[1], is_next)
-                tokenized_data.append(tokenized_sequence)
+                # Divide the story into chunks of max_length tokens
+                story_chunks = [story[i:i + max_length] for i in range(0, len(story), max_length)]
     
-        # Save the tokenized data
-        torch.save(tokenized_data, 'tokenized_data.pt')
+                # Encode the chunks
+                for chunk in story_chunks:
+                    tokenized_sequence = encode(self.tokenizer, chunk)
+                    # Append the is_next label to the tokenized sequence
+                    tokenized_sequence = (tokenized_sequence[0], tokenized_sequence[1], is_next)
+                    tokenized_data.append(tokenized_sequence)
+    
+            # Save the tokenized data
+            torch.save(tokenized_data, filename)
+    
+        tokenize_and_save(train_df, 'tokenized_train_data.pt')
+        tokenize_and_save(val_df, 'tokenized_val_data.pt')
     
         return tokenized_data
 
