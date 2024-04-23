@@ -9,7 +9,7 @@ from model import BERTLM, BERT
 
 import tqdm
 import logging
-
+import wandb
 
 class KinyaStoryBERTTrainer:
     """
@@ -68,8 +68,35 @@ class KinyaStoryBERTTrainer:
         print("Total Parameters:", sum([p.nelement() for p in self.model.parameters()]))
         logging.basicConfig(level=logging.INFO)
 
+        self.config = {
+            "lr": lr,
+            "betas": betas,
+            "weight_decay": weight_decay,
+            "warmup_steps": warmup_steps,
+            "with_cuda": with_cuda,
+            "cuda_devices": cuda_devices,
+            "log_freq": log_freq,
+            "vocab_size": vocab_size,
+            "hidden": bert.hidden,
+            "layers": bert.n_layers,
+            "attn_heads": bert.attn_heads,
+            "model": "BERT",
+            "model Parameters": sum([p.nelement() for p in self.model.parameters()])
+        }
+
         logging.info(f'Initialized BERT trainer with cuda: {cuda_condition}, device: {self.device}')
         logging.info(f'Total Parameters: {sum([p.nelement() for p in self.model.parameters()])}')
+        wandb.login(key="3644f3d76a394594794c1b136a20f75303e871ba")
+
+        wandb.init(
+            project="project-ablations", 
+            config=self.config,
+            name = "kinya-bert-training", ## Wandb creates random run names if you skip this field
+            reinit = True, ### Allows reinitalizing runs when you re-run this cell
+            id ="kinya-bert-training", ### Insert specific run id here if you want to resume a previous run
+            #resume = "must", ### You need this to resume previous runs, but comment out reinit = True when using this
+            )
+
 
     def train(self, epoch):
         self.iteration(epoch, self.train_data)
@@ -80,6 +107,7 @@ class KinyaStoryBERTTrainer:
     
     
     def iteration(self, epoch, data_loader, train=True):
+        wandb.watch(self.model, log="all")
         
         logging.info(f'Starting iteration, epoch: {epoch}, train: {train}')
     
@@ -107,11 +135,17 @@ class KinyaStoryBERTTrainer:
             #print("next_sent_output", next_sent_output.shape, data["is_next"].shape)
             next_loss = self.criterion(next_sent_output, data["is_next"].squeeze())
 
+            wandb.log({"next_loss": next_loss.item()})
+
             # 2-2. NLLLoss of predicting masked token word
             mask_loss = self.criterion(mask_lm_output.transpose(1, 2), data["bert_label"])
 
+            wandb.log({"mask_loss": mask_loss.item()})
+
             # 2-3. Adding next_loss and mask_loss : 3.4 Pre-training Procedure
             loss = next_loss + mask_loss
+
+            wandb.log({"total_loss": loss.item()})
 
             # 3. backward and optimization only in train
             if train:
@@ -133,11 +167,15 @@ class KinyaStoryBERTTrainer:
                 "loss": loss.item()
             }
 
+            wandb.log(post_fix)
+
             if i % self.log_freq == 0:
                 data_iter.write(str(post_fix))
 
         print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_iter), "total_acc=",
               total_correct * 100.0 / total_element)
+        
+        wandb.log({"avg_loss": avg_loss / len(data_iter), "total_acc": total_correct * 100.0 / total_element})
 
     def save(self, epoch, file_path="output/bert_trained.model"):
         """
@@ -149,6 +187,7 @@ class KinyaStoryBERTTrainer:
         """
         output_path = file_path + ".ep%d" % epoch
         torch.save(self.bert.cpu(), output_path)
+        wandb.save(output_path)
         self.bert.to(self.device)
         print("EP:%d Model Saved on:" % epoch, output_path)
         return output_path
