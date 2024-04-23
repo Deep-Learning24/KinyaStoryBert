@@ -108,8 +108,9 @@ class KinyaStoryBERTTrainer:
             id ="kinya-bert-training", ### Insert specific run id here if you want to resume a previous run
             resume = "must", ### You need this to resume previous runs, but comment out reinit = True when using this
             )
-        self.best_loss = 1000000
-        self.should_save = False
+        
+        self.best_loss = float('inf')
+        
 
     def train(self, epoch):
         
@@ -118,7 +119,8 @@ class KinyaStoryBERTTrainer:
     def test(self, epoch):
         self.iteration(epoch, self.test_data, train=False)
 
-    
+    def get_average_loss(self):
+        return self.best_loss
     
     def iteration(self, epoch, data_loader, train=True):
         wandb.watch(self.model, log="all")
@@ -183,13 +185,8 @@ class KinyaStoryBERTTrainer:
 
             if avg_loss / (i + 1) < self.best_loss:
                 self.best_loss = avg_loss / (i + 1)
-                self.should_save = True
-            else:
-                self.should_save = False
                 
-
-            
-
+                
             if i % self.log_freq == 0:
                 data_iter.write(str(post_fix))
 
@@ -206,9 +203,7 @@ class KinyaStoryBERTTrainer:
         :param file_path: model output path which gonna be file_path+"ep%d" % epoch
         :return: final_output_path
         """
-        if not self.should_save:
-            print("Not saving model")
-            return None
+     
         output_path = file_path + ".ep%d" % epoch
     
         torch.save(self.model.cpu().state_dict(), output_path)

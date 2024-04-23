@@ -72,10 +72,19 @@ def train():
     
     if not os.path.exists(args.output_path):
         os.makedirs(args.output_path)
+    best_loss = float('inf')
+    
     for epoch in range(args.epochs):
         trainer.train(epoch)
-        trainer.save(epoch, args.output_path)
-
+    
+        # Get the average loss for the current epoch
+        current_loss = trainer.get_average_loss()
+    
+        # If the current loss is lower than the best loss, save the model and update the best loss
+        if current_loss < best_loss:
+            trainer.save(epoch, args.output_path)
+            best_loss = current_loss
+    
         if test_data_loader is not None:
             trainer.test(epoch)
 
