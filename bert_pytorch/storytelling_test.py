@@ -5,7 +5,7 @@ import torch
 sys.path.append('../')
 from model import BERT
 from trainer import KinyaStoryBERTTrainer
-from .dataset.kinya_new_dataset import KinyaStoryNewDataset
+from dataset import KinyaStoryNewDataset
 from transformers import AutoTokenizer
 import os
 from KinyaTokenizer import KinyaTokenizer, encode, decode
@@ -22,7 +22,7 @@ class BERTInference:
     def generate_text(self, starting_text, max_length=128):
         try:
             # Create a template file and insert the starting text
-            starting_text_temp_file = '../data/starting_text_temp.txt'
+            starting_text_temp_file = 'kinyastory_data/starting_text_temp.txt'
             with open(starting_text_temp_file, 'w') as f:
                 f.write(starting_text)
     
