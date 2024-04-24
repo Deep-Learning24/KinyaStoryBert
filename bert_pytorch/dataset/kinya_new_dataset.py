@@ -28,13 +28,14 @@ def preprocess_corpus(corpus_path, output_path, final_output_path):
             for line in tqdm.tqdm(f, desc="Preprocessing Dataset again"):
                 line = line.strip()  # Remove leading/trailing whitespace
                 if line:
-                    line_middle = len(line) // 2
+                    words = line.split()
+                    line_middle = len(words) // 2
                     # If the middle word is [SEP], split after it
-                    if "[SEP]" in line:
-                        index = line.index("[SEP]")
-                        parts = [line[:index + 5], line[index + 5:]]
+                    if "[SEP]" in words:
+                        index = words.index("[SEP]")
+                        parts = [" ".join(words[:index + 1]), " ".join(words[index + 1:])]
                     else:
-                        parts = [line[:line_middle], line[line_middle:]]
+                        parts = [" ".join(words[:line_middle]), " ".join(words[line_middle:])]
                     f_out.write(parts[0] + "\t" + parts[1] + "\n")
 
     # Remove the temporary file
