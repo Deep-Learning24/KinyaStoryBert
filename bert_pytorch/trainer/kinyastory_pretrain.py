@@ -168,10 +168,16 @@ class KinyaStoryBERTTrainer:
                 self.optim_schedule.step_and_update_lr()
 
             # next sentence prediction accuracy
+            logging.info(f'next_sent_output shape: {next_sent_output.shape}, data["is_next"] shape: {data["is_next"].shape}')
             correct = next_sent_output.argmax(dim=-1).eq(data["is_next"]).sum().item()
+            
+            logging.info(f'Correct: {correct}, total_element: {data["is_next"].nelement()}')
+
             avg_loss += loss.item()
             total_correct += correct
             total_element += data["is_next"].nelement()
+
+            logging.info(f'Epoch: {epoch}, Iteration: {i}, Loss: {loss.item()}, Avg Loss: {avg_loss / (i + 1)}, Accuracy: {total_correct / total_element * 100}')
 
             post_fix = {
                 "epoch": epoch,
@@ -180,6 +186,8 @@ class KinyaStoryBERTTrainer:
                 "avg_acc": total_correct / total_element * 100,
                 "loss": loss.item()
             }
+
+            logging.info(f'Post fix: {post_fix}')
 
             if avg_loss / (i + 1) < self.best_loss:
                 self.best_loss = avg_loss / (i + 1)
