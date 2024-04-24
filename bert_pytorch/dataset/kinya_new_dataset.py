@@ -62,7 +62,7 @@ class KinyaStoryNewDataset(Dataset):
                   "segment_label": segment_label,
                   "is_next": is_next_label}
         
-        print("output: ", output)
+        #print("output: ", output)
 
         return {key: torch.tensor(value) for key, value in output.items()}
 
