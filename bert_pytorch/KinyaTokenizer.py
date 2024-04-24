@@ -110,6 +110,7 @@ class KinyaTokenizer(object):
                         is_next = 0
         
                     story = story_input + ' [SEP] ' + story_output
+                    f.write(story + '\n')
         
                     # Divide the story into chunks of max_length tokens
                     story_chunks = [story[i:i + max_length] for i in range(0, len(story), max_length)]
@@ -120,7 +121,7 @@ class KinyaTokenizer(object):
                         # Append the is_next label to the tokenized sequence
                         tokenized_sequence = (tokenized_sequence[0], tokenized_sequence[1], is_next)
                         tokenized_data.append(tokenized_sequence)
-                        f.write(chunk + '\n')
+                        
     
             # Save the tokenized data
             torch.save(tokenized_data, filename)
