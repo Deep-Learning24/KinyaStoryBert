@@ -1,9 +1,16 @@
 import os
+import re
 from torch.utils.data import Dataset
 import tqdm
 import torch
 import random
 from transformers import AutoTokenizer
+import nltk
+
+
+from nltk.corpus import words
+
+nltk.download('words')
 
 
 class KinyaStoryNewDataset(Dataset):
@@ -16,6 +23,8 @@ class KinyaStoryNewDataset(Dataset):
         self.corpus_path = corpus_path
         self.encoding = encoding
         self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
+
+        self.common_english_words = set(words.words())
 
         with open(corpus_path, "r", encoding=encoding) as f:
             if self.corpus_lines is None and not on_memory:
@@ -67,11 +76,36 @@ class KinyaStoryNewDataset(Dataset):
         #print("output: ", output)
 
         return {key: torch.tensor(value) for key, value in output.items()}
+    
+    def is_english_word(self, word):
+        # Basic check to see if a word is an English word.
+        # This could be a simple check against a set of common English words.
+        # For a more comprehensive solution, consider using a dictionary or an NLP library.
+        return word.lower() in self.common_english_words
+    
+    def preprocess_text(self, text):
+        # Ensure text is a string
+        text = str(text)
 
+        # Remove URLs
+        text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
+        # Remove HTML tags
+        text = re.sub(r'<.*?>', '', text)
+        # Remove special characters like #, @
+        text = re.sub(r'[@#]', '', text)
+        # Remove English words by splitting the text and filtering
+        words = text.split()
+        filtered_words = [word for word in words if not self.is_english_word(word)]
+        text = ' '.join(filtered_words)
+        # Replace multiple spaces with a single space
+        text = re.sub(r'\s+', ' ', text).strip()
+        return text
+    
     def random_word(self, sentence):
         if sentence is None:
             return [], []
         # Find tokens in the sentence using the tokenizer
+        sentence = self.preprocess_text(sentence)
         tokens = self.tokenizer.tokenize(sentence)
         #print("tokens: ", tokens)
         output_label = []
