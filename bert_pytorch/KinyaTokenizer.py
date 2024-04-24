@@ -109,8 +109,12 @@ class KinyaTokenizer(object):
                         story_output = df.sample(n=1)['story_output'].values[0]
                         is_next = 0
         
-                    story = story_input + ' [SEP] ' + story_output
-                    f.write(story + '\n')
+                    story = story_input + '[SEP]' + story_output
+                    # Don't store the story if it empty
+                    if story.strip():
+                        f.write(story + '\n')
+                    else:
+                        continue
         
                     # Divide the story into chunks of max_length tokens
                     story_chunks = [story[i:i + max_length] for i in range(0, len(story), max_length)]

@@ -3,6 +3,7 @@ from torch.utils.data import Dataset
 import tqdm
 import torch
 import random
+from transformers import AutoTokenizer
 
 
 class KinyaStoryNewDataset(Dataset):
@@ -14,6 +15,7 @@ class KinyaStoryNewDataset(Dataset):
         self.corpus_lines = corpus_lines
         self.corpus_path = corpus_path
         self.encoding = encoding
+        self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
 
         with open(corpus_path, "r", encoding=encoding) as f:
             if self.corpus_lines is None and not on_memory:
@@ -69,7 +71,9 @@ class KinyaStoryNewDataset(Dataset):
     def random_word(self, sentence):
         if sentence is None:
             return [], []
-        tokens = sentence.split()
+        # Find tokens in the sentence using the tokenizer
+        tokens = self.tokenizer.tokenize(sentence)
+        #print("tokens: ", tokens)
         output_label = []
 
         for i, token in enumerate(tokens):

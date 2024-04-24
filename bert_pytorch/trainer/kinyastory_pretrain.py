@@ -97,7 +97,7 @@ class KinyaStoryBERTTrainer:
         }
         self.load_model()
 
-        tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
+        self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
 
         logging.info(f'Initialized BERT trainer with cuda: {cuda_condition}, device: {self.device}')
         logging.info(f'Total Parameters: {sum([p.nelement() for p in self.model.parameters()])}')
@@ -148,11 +148,11 @@ class KinyaStoryBERTTrainer:
             logging.info(f'segment_label shape: {data["segment_label"].shape}, device: {data["segment_label"].device}')
             logging.info(f'model device: {next(self.model.parameters()).device}')
 
-            logging.info(f"Inputed bert input: {decode(self.bert.tokenizer, data['bert_input'][0].tolist())}")
+            logging.info(f"Inputed bert input: {decode(self.tokenizer, data['bert_input'][0].tolist())}")
 
             logging.info(f"Inputed segment label: {data['segment_label'][0].tolist()}")
-
-            logging.info(f"Inputed bert label: {decode(self.bert.tokenizer, data["is_next"][0].tolist())}")
+            print("Is next token?: ", data['is_next'])
+            logging.info(f"Inputed bert next token: {decode(self.tokenizer, data['is_next'].tolist())}")
 
     
              # 1. forward the next_sentence_prediction and masked_lm model
@@ -160,8 +160,8 @@ class KinyaStoryBERTTrainer:
 
             logging.info(f'Next sent output shape: {next_sent_output.shape}')
             logging.info(f'Mask LM output shape: {mask_lm_output.shape}')
-            logging.info(f'Next sent output: {decode(self.bert.tokenizer, next_sent_output.argmax(dim=-1)[0].tolist())}')
-            logging.info(f'Mask LM output: {decode(self.bert.tokenizer, mask_lm_output.argmax(dim=-1)[0].tolist())}')
+            logging.info(f'Next sent output: {decode(self.tokenizer, next_sent_output.argmax(dim=-1).tolist())}')
+            logging.info(f'Mask LM output: {decode(self.tokenizer, mask_lm_output.argmax(dim=-1)[0].tolist())}')
 
             # 2-1. NLL(negative log likelihood) loss of is_next classification result
             #print("next_sent_output", next_sent_output.shape, data["is_next"].shape)
