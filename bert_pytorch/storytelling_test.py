@@ -47,11 +47,15 @@ class BERTInference:
                 predictions = self.model.forward(generated, segment_label)
                 predictions_masked = predictions[0].squeeze(0).to(self.device)
                 predictions_next = predictions[1].squeeze(0).to(self.device)
-
+                
                 # Replace the masked token in the input with the predicted masked token
                 masked_index = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
+                
                 if masked_index.size(0) > 0:
-                    next_masked = torch.argmax(predictions_masked[masked_index[0], :], dim=-1).unsqueeze(0)
+                    if predictions_masked.dim() > 1:
+                        next_masked = torch.argmax(predictions_masked[masked_index[0], :], dim=-1).unsqueeze(0)
+                    else:
+                        next_masked = torch.argmax(predictions_masked, dim=-1).unsqueeze(0)
                     generated[0, masked_index[0]] = next_masked
 
                 # Append the predicted next word token to the input
