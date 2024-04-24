@@ -148,7 +148,7 @@ class KinyaStoryBERTTrainer:
             next_sent_output, mask_lm_output = self.model.forward(data["bert_input"], data["segment_label"])
 
             # 2-1. NLL(negative log likelihood) loss of is_next classification result
-            print("next_sent_output", next_sent_output.shape, data["is_next"].shape)
+            #print("next_sent_output", next_sent_output.shape, data["is_next"].shape)
             next_loss = self.criterion(next_sent_output, data["is_next"].squeeze())
 
             #logging.info(f'Next loss: {next_loss}')
