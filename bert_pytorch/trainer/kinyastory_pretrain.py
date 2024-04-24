@@ -140,9 +140,9 @@ class KinyaStoryBERTTrainer:
     
         for i, data in data_iter:
             data = {key: value.to(self.device) for key, value in data.items()}
-            logging.info(f'bert_input shape: {data["bert_input"].shape}, device: {data["bert_input"].device}')
-            logging.info(f'segment_label shape: {data["segment_label"].shape}, device: {data["segment_label"].device}')
-            logging.info(f'model device: {next(self.model.parameters()).device}')
+            # logging.info(f'bert_input shape: {data["bert_input"].shape}, device: {data["bert_input"].device}')
+            # logging.info(f'segment_label shape: {data["segment_label"].shape}, device: {data["segment_label"].device}')
+            # logging.info(f'model device: {next(self.model.parameters()).device}')
     
              # 1. forward the next_sentence_prediction and masked_lm model
             next_sent_output, mask_lm_output = self.model.forward(data["bert_input"], data["segment_label"])
@@ -151,19 +151,19 @@ class KinyaStoryBERTTrainer:
             print("next_sent_output", next_sent_output.shape, data["is_next"].shape)
             next_loss = self.criterion(next_sent_output, data["is_next"].squeeze())
 
-            logging.info(f'Next loss: {next_loss}')
+            #logging.info(f'Next loss: {next_loss}')
 
 
             # 2-2. NLLLoss of predicting masked token word
             mask_loss = self.criterion(mask_lm_output.transpose(1, 2), data["bert_label"])
 
-            logging.info(f'Mask loss: {mask_loss}')
+            #logging.info(f'Mask loss: {mask_loss}')
 
 
             # 2-3. Adding next_loss and mask_loss : 3.4 Pre-training Procedure
             loss = next_loss + mask_loss
 
-            logging.info(f'Loss: {loss}')
+            #logging.info(f'Loss: {loss}')
 
            
 
@@ -174,16 +174,16 @@ class KinyaStoryBERTTrainer:
                 self.optim_schedule.step_and_update_lr()
 
             # next sentence prediction accuracy
-            logging.info(f'next_sent_output shape: {next_sent_output.shape}, data["is_next"] shape: {data["is_next"].shape}')
+            #logging.info(f'next_sent_output shape: {next_sent_output.shape}, data["is_next"] shape: {data["is_next"].shape}')
             correct = next_sent_output.argmax(dim=-1).eq(data["is_next"]).sum().item()
             
-            logging.info(f'Correct: {correct}, total_element: {data["is_next"].nelement()}')
+            #logging.info(f'Correct: {correct}, total_element: {data["is_next"].nelement()}')
 
             avg_loss += loss.item()
             total_correct += correct
             total_element += data["is_next"].nelement()
 
-            logging.info(f'Epoch: {epoch}, Iteration: {i}, Loss: {loss.item()}, Avg Loss: {avg_loss / (i + 1)}, Accuracy: {total_correct / total_element * 100}')
+            #logging.info(f'Epoch: {epoch}, Iteration: {i}, Loss: {loss.item()}, Avg Loss: {avg_loss / (i + 1)}, Accuracy: {total_correct / total_element * 100}')
 
             post_fix = {
                 "epoch": epoch,
@@ -193,7 +193,7 @@ class KinyaStoryBERTTrainer:
                 "loss": loss.item()
             }
 
-            logging.info(f'Post fix: {post_fix}')
+            #logging.info(f'Post fix: {post_fix}')
 
             if avg_loss / (i + 1) < self.best_loss:
                 self.best_loss = avg_loss / (i + 1)
