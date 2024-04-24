@@ -89,17 +89,17 @@ class KinyaStoryNewDataset(Dataset):
         t2_random, t2_label = self.random_word(t2)
 
         # [CLS] tag = SOS tag, [SEP] tag = EOS tag
-        t1 = [self.vocab.sos_index] + t1_random + [self.vocab.eos_index]
-        t2 = t2_random + [self.vocab.eos_index]
+        t1 = [self.vocab["[CLS]"]] + t1_random + [self.vocab["[SEP]"]]
+        t2 = t2_random + [self.vocab["[SEP]"]]
 
-        t1_label = [self.vocab.pad_index] + t1_label + [self.vocab.pad_index]
-        t2_label = t2_label + [self.vocab.pad_index]
+        t1_label = [self.vocab["[PAD]"]] + t1_label + [self.vocab["[PAD]"]]
+        t2_label = t2_label + [self.vocab["[PAD]"]]
 
         segment_label = ([1 for _ in range(len(t1))] + [2 for _ in range(len(t2))])[:self.seq_len]
         bert_input = (t1 + t2)[:self.seq_len]
         bert_label = (t1_label + t2_label)[:self.seq_len]
 
-        padding = [self.vocab.pad_index for _ in range(self.seq_len - len(bert_input))]
+        padding = [self.vocab["[PAD]"] for _ in range(self.seq_len - len(bert_input))]
         bert_input.extend(padding), bert_label.extend(padding), segment_label.extend(padding)
 
         output = {"bert_input": bert_input,
@@ -120,7 +120,7 @@ class KinyaStoryNewDataset(Dataset):
 
                 # 80% randomly change token to mask token
                 if prob < 0.8:
-                    tokens[i] = self.vocab.mask_index
+                    tokens[i] = self.vocab["[MASK]"]
 
                 # 10% randomly change token to random token
                 elif prob < 0.9:
@@ -128,12 +128,12 @@ class KinyaStoryNewDataset(Dataset):
 
                 # 10% randomly change token to current token
                 else:
-                    tokens[i] = self.vocab.stoi.get(token, self.vocab.unk_index)
+                    tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
 
-                output_label.append(self.vocab.stoi.get(token, self.vocab.unk_index))
+                output_label.append(self.vocab.get(token, self.vocab["[UNK]"]))
 
             else:
-                tokens[i] = self.vocab.stoi.get(token, self.vocab.unk_index)
+                tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
                 output_label.append(0)
 
         return tokens, output_label
