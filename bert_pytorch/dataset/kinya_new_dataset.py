@@ -13,6 +13,34 @@ from nltk.corpus import words
 nltk.download('words')
 
 
+def preprocess_corpus(corpus_path, output_path, final_output_path):
+    # First pass: Remove empty lines and write to temporary file
+    with open(corpus_path, "r", encoding="ISO-8859-1") as f:
+        with open(output_path, "w", encoding="ISO-8859-1") as f_out:
+            for line in tqdm.tqdm(f, desc="Preprocessing Dataset"):
+                # Check if the line is empty or contains only whitespace
+                if line.strip():  # Check if line is not empty
+                    f_out.write(line)
+
+    # Second pass: Split lines into two parts and add a tab between them
+    with open(output_path, "r", encoding="ISO-8859-1") as f:
+        with open(final_output_path, "w", encoding="ISO-8859-1") as f_out:
+            for line in tqdm.tqdm(f, desc="Preprocessing Dataset again"):
+                line = line.strip()  # Remove leading/trailing whitespace
+                if line:
+                    line_middle = len(line) // 2
+                    # If the middle word is [SEP], split after it
+                    if "[SEP]" in line:
+                        index = line.index("[SEP]")
+                        parts = [line[:index + 5], line[index + 5:]]
+                    else:
+                        parts = [line[:line_middle], line[line_middle:]]
+                    f_out.write(parts[0] + "\t" + parts[1] + "\n")
+
+    # Remove the temporary file
+    os.remove(output_path)
+
+
 class KinyaStoryNewDataset(Dataset):
     def __init__(self, corpus_path, vocab, seq_len, encoding="ISO-8859-1", corpus_lines=None, on_memory=True):
         self.vocab = vocab
@@ -25,8 +53,17 @@ class KinyaStoryNewDataset(Dataset):
         self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
 
         self.common_english_words = set(words.words())
+        
+        #FUll path of the corpus file excluding the extension
+        corpus_path_file_name = os.path.splitext(corpus_path)[0]
+       
+    
+        corpus_path_file_name, _ = os.path.splitext(corpus_path)
+        output_path = f"{corpus_path_file_name}_preprocessed.txt"
+        final_output_path = f"{corpus_path_file_name}_final.txt"
+        preprocess_corpus(corpus_path, output_path, final_output_path)
 
-        with open(corpus_path, "r", encoding=encoding) as f:
+        with open(final_output_path, "r", encoding=encoding) as f:
             if self.corpus_lines is None and not on_memory:
                 for _ in tqdm.tqdm(f, desc="Loading Dataset", total=corpus_lines):
                     self.corpus_lines += 1
@@ -37,8 +74,8 @@ class KinyaStoryNewDataset(Dataset):
                 self.corpus_lines = len(self.lines)
 
         if not on_memory:
-            self.file = open(corpus_path, "r", encoding=encoding)
-            self.random_file = open(corpus_path, "r", encoding=encoding)
+            self.file = open(final_output_path, "r", encoding=encoding)
+            self.random_file = open(final_output_path, "r", encoding=encoding)
 
             for _ in range(random.randint(self.corpus_lines if self.corpus_lines < 1000 else 1000)):
                 self.random_file.__next__()
@@ -48,66 +85,32 @@ class KinyaStoryNewDataset(Dataset):
 
     def __getitem__(self, item):
         t1, t2, is_next_label = self.random_sent(item)
-
-        # print("t1: ", t1)
-        # print("t2: ", t2)
         t1_random, t1_label = self.random_word(t1)
         t2_random, t2_label = self.random_word(t2)
 
         # [CLS] tag = SOS tag, [SEP] tag = EOS tag
-        t1 = [self.vocab["[CLS]"]] + t1_random + [self.vocab["[SEP]"]]
-        t2 = t2_random + [self.vocab["[SEP]"]]
+        t1 = [self.vocab.sos_index] + t1_random + [self.vocab.eos_index]
+        t2 = t2_random + [self.vocab.eos_index]
 
-        t1_label = [self.vocab["[PAD]"]] + t1_label + [self.vocab["[PAD]"]]
-        t2_label = t2_label + [self.vocab["[PAD]"]]
+        t1_label = [self.vocab.pad_index] + t1_label + [self.vocab.pad_index]
+        t2_label = t2_label + [self.vocab.pad_index]
 
         segment_label = ([1 for _ in range(len(t1))] + [2 for _ in range(len(t2))])[:self.seq_len]
         bert_input = (t1 + t2)[:self.seq_len]
         bert_label = (t1_label + t2_label)[:self.seq_len]
 
-        padding = [self.vocab["[PAD]"] for _ in range(self.seq_len - len(bert_input))]
+        padding = [self.vocab.pad_index for _ in range(self.seq_len - len(bert_input))]
         bert_input.extend(padding), bert_label.extend(padding), segment_label.extend(padding)
 
         output = {"bert_input": bert_input,
                   "bert_label": bert_label,
                   "segment_label": segment_label,
                   "is_next": is_next_label}
-        
-        #print("output: ", output)
 
         return {key: torch.tensor(value) for key, value in output.items()}
-    
-    def is_english_word(self, word):
-        # Basic check to see if a word is an English word.
-        # This could be a simple check against a set of common English words.
-        # For a more comprehensive solution, consider using a dictionary or an NLP library.
-        return word.lower() in self.common_english_words
-    
-    def preprocess_text(self, text):
-        # Ensure text is a string
-        text = str(text)
 
-        # Remove URLs
-        text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
-        # Remove HTML tags
-        text = re.sub(r'<.*?>', '', text)
-        # Remove special characters like #, @
-        text = re.sub(r'[@#]', '', text)
-        # Remove English words by splitting the text and filtering
-        words = text.split()
-        filtered_words = [word for word in words if not self.is_english_word(word)]
-        text = ' '.join(filtered_words)
-        # Replace multiple spaces with a single space
-        text = re.sub(r'\s+', ' ', text).strip()
-        return text
-    
     def random_word(self, sentence):
-        if sentence is None:
-            return [], []
-        # Find tokens in the sentence using the tokenizer
-        sentence = self.preprocess_text(sentence)
-        tokens = self.tokenizer.tokenize(sentence)
-        #print("tokens: ", tokens)
+        tokens = sentence.split()
         output_label = []
 
         for i, token in enumerate(tokens):
@@ -117,7 +120,7 @@ class KinyaStoryNewDataset(Dataset):
 
                 # 80% randomly change token to mask token
                 if prob < 0.8:
-                    tokens[i] = self.vocab["[MASK]"]
+                    tokens[i] = self.vocab.mask_index
 
                 # 10% randomly change token to random token
                 elif prob < 0.9:
@@ -125,12 +128,12 @@ class KinyaStoryNewDataset(Dataset):
 
                 # 10% randomly change token to current token
                 else:
-                    tokens[i] = self.vocab[token] if token in self.vocab else self.vocab["[UNK]"]
+                    tokens[i] = self.vocab.stoi.get(token, self.vocab.unk_index)
 
-                output_label.append(self.vocab.get(token, self.vocab["[UNK]"]))
+                output_label.append(self.vocab.stoi.get(token, self.vocab.unk_index))
 
             else:
-                tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
+                tokens[i] = self.vocab.stoi.get(token, self.vocab.unk_index)
                 output_label.append(0)
 
         return tokens, output_label
@@ -146,74 +149,26 @@ class KinyaStoryNewDataset(Dataset):
 
     def get_corpus_line(self, item):
         if self.on_memory:
-            while True: # Skip empty lines
-                if item >= len(self.lines):
-                    return None, None
-                line  = self.lines[item][0]
-                if line.strip():
-                    break
-                item += 1
-            next_item = item + 1
-
-            #print("self.lines[item]: ", self.lines[item])
-            #print("self.lines[item][0]: ", self.lines[item][0])
-            while True:  # Skip empty lines for the next line
-                if next_item >= len(self.lines):
-                    next_line = None
-                    break
-                next_line = self.lines[next_item][0]
-                if next_line.strip():  # If the line is not empty
-                    break
-                next_item += 1  # Go to the next line
-            
-            # print("self.lines[item][0]: ", self.lines[item][0])
-            # print("next_line: ", next_line)
-
-            return self.lines[item][0], next_line
+            return self.lines[item][0], self.lines[item][1]
         else:
-            # Rest of your code
             line = self.file.__next__()
             if line is None:
                 self.file.close()
                 self.file = open(self.corpus_path, "r", encoding=self.encoding)
                 line = self.file.__next__()
-    
-            t1 = line[:-1]
-            line = self.file.__next__()
-            if line is None:
-                t2 = None
-            else:
-                t2 = line[:-1]
-            
-            self.file.__next__()  # Skip the next line
 
+            t1, t2 = line[:-1].split("\t")
             return t1, t2
 
     def get_random_line(self):
         if self.on_memory:
-            while True:  # Skip empty lines for the current line
-                item = random.randrange(len(self.lines))
-                line = self.lines[item][0]
-                if line.strip():  # If the line is not empty
-                    break
-    
-            next_item = item + 1
-            while True:  # Skip empty lines for the next line
-                if next_item >= len(self.lines):
-                    next_line = None
-                    break
-                next_line = self.lines[next_item][0]
-                if next_line.strip():  # If the line is not empty
-                    break
-                next_item += 1  # Go to the next line
-    
-            return next_line
-        else:
-            line = ""
-            while not line.strip():  # Skip empty lines
-                self.file.seek(0, os.SEEK_END)
-                pos = random.randint(0, self.file.tell())
-                self.file.seek(pos)
-                self.file.readline()  # This is for line completeness
-                line = self.file.readline()
-            return line[:-1]  # Return the line itself, not a split element
+            return self.lines[random.randrange(len(self.lines))][1]
+
+        line = self.file.__next__()
+        if line is None:
+            self.file.close()
+            self.file = open(self.corpus_path, "r", encoding=self.encoding)
+            for _ in range(random.randint(self.corpus_lines if self.corpus_lines < 1000 else 1000)):
+                self.random_file.__next__()
+            line = self.random_file.__next__()
+        return line[:-1].split("\t")[1]
