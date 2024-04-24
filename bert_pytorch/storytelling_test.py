@@ -24,7 +24,7 @@ class BERTInference:
             # Create a template file and insert the starting text
             starting_text_temp_file = 'kinyastory_data/starting_text_temp.txt'
             with open(starting_text_temp_file, 'w') as f:
-                f.write(starting_text)
+                f.write(starting_text+'\n')
     
             inference_dataset = KinyaStoryNewDataset(corpus_path=starting_text_temp_file, vocab=self.vocab, seq_len=128)
             inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=1, shuffle=False)
@@ -66,6 +66,7 @@ class BERTInference:
                     # If the length of generated exceeds max_length, remove the first token
                     if generated.size(1) > max_length:
                         generated = generated[:, 1:]
+                    print(f"Generated text: {decode(self.tokenizer, generated.squeeze().tolist())}")
     
             print("Decoding generated text...")
             return decode(self.tokenizer, generated.squeeze().tolist())
