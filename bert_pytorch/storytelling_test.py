@@ -5,7 +5,7 @@ import torch
 sys.path.append('../')
 from model import BERT
 from trainer import KinyaStoryBERTTrainer
-from dataset.Kinya_storydataset import KinyaStoryBertDataset
+from .dataset import KinyaStoryNewDataset
 from transformers import AutoTokenizer
 import os
 from KinyaTokenizer import KinyaTokenizer, encode, decode
@@ -18,48 +18,51 @@ class BERTInference:
         self.device = device
         self.vocab = tokenizer.get_vocab()
 
+    
     def generate_text(self, starting_text, max_length=128):
         try:
-            print("Encoding input text...")
-            input_ids = encode(self.tokenizer, starting_text)[0]
-            input_ids = [self.vocab["[CLS]"]] + input_ids + [self.vocab["[SEP]"]]
+            # Create a template file and insert the starting text
+            starting_text_temp_file = '../data/starting_text_temp.txt'
+            with open(starting_text_temp_file, 'w') as f:
+                f.write(starting_text)
     
-            segment_label = [1 for _ in range(len(input_ids))]
+            inference_dataset = KinyaStoryNewDataset(corpus_path=starting_text_temp_file, vocab=self.vocab, seq_len=128)
+            inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=1, shuffle=False)
     
-            print("Creating tensors...")
-            generated = torch.tensor(input_ids).unsqueeze(0)
-            generated = generated.to(self.device)
-            segment_label = torch.tensor(segment_label).unsqueeze(0).to(self.device)
+            for batch in inference_loader:
+                generated = batch['bert_input']
+                segment_label = batch['segment_label']
+                break
+            # delete the starting text temp file
+            os.remove(starting_text_temp_file)
     
             print("Setting model to eval mode...")
             self.model.eval()
     
             with torch.no_grad():
                 for _ in tqdm(range(max_length)):
-                    # print("Running forward pass...")
-                    # print(f"Shape of generated:  {generated.shape}")
-                    # print(f"Shape of the segment labels: {segment_label.shape}")
-    
                     predictions = self.model.forward(generated, segment_label)
-                    predictions = predictions[1].squeeze(0).to(self.device)
-                    # print("Predictions: ", predictions)
-                    # print("Getting next word...")
-                    next_word = torch.argmax(predictions[-1, :], dim=-1).unsqueeze(0)
+                    predictions_masked = predictions[0].squeeze(0).to(self.device)
+                    predictions_next = predictions[1].squeeze(0).to(self.device)
+    
+                    # Replace the masked token in the input with the predicted masked token
+                    masked_index = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
+                    if masked_index.size(0) > 0:
+                        next_masked = torch.argmax(predictions_masked[masked_index[0], :], dim=-1).unsqueeze(0)
+                        generated[0, masked_index[0]] = next_masked
+    
+                    # Append the predicted next word token to the input
+                    next_word = torch.argmax(predictions_next[-1, :], dim=-1).unsqueeze(0)
     
                     if next_word.item() == encode(self.tokenizer, '[SEP]')[0]:
                         print(f"Got stuck here at {next_word.item()} ")
                         break
     
-                    # print("Updating generated and segment_label...")
-                    # print(f"Found next token: {next_word}")
-    
-                    # Add the next word to the end of generated
                     generated = torch.cat((generated, next_word.unsqueeze(0)), dim=1)
+    
                     # If the length of generated exceeds max_length, remove the first token
                     if generated.size(1) > max_length:
                         generated = generated[:, 1:]
-    
-                    #print(decode(self.tokenizer, generated.squeeze().tolist()))
     
             print("Decoding generated text...")
             return decode(self.tokenizer, generated.squeeze().tolist())

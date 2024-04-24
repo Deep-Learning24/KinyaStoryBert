@@ -5,8 +5,7 @@ import sys
 sys.path.append('../')
 from model import BERT
 from trainer import KinyaStoryBERTTrainer
-from dataset.Kinya_storydataset import KinyaStoryBertDataset
-from dataset.kinya_new_dataset import KinyaStoryNewDataset
+from dataset import KinyaStoryNewDataset
 from transformers import AutoTokenizer
 import os
 
