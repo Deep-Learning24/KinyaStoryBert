@@ -67,6 +67,8 @@ class KinyaStoryNewDataset(Dataset):
         return {key: torch.tensor(value) for key, value in output.items()}
 
     def random_word(self, sentence):
+        if sentence is None:
+            return [], []
         tokens = sentence.split()
         output_label = []
 
