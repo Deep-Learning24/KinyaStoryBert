@@ -140,24 +140,30 @@ class KinyaStoryBERTTrainer:
     
         for i, data in data_iter:
             data = {key: value.to(self.device) for key, value in data.items()}
-            # logging.info(f'bert_input shape: {data["bert_input"].shape}, device: {data["bert_input"].device}')
-            # logging.info(f'segment_label shape: {data["segment_label"].shape}, device: {data["segment_label"].device}')
-            # logging.info(f'model device: {next(self.model.parameters()).device}')
+            logging.info(f'bert_input shape: {data["bert_input"].shape}, device: {data["bert_input"].device}')
+            logging.info(f'segment_label shape: {data["segment_label"].shape}, device: {data["segment_label"].device}')
+            logging.info(f'model device: {next(self.model.parameters()).device}')
     
              # 1. forward the next_sentence_prediction and masked_lm model
             next_sent_output, mask_lm_output = self.model.forward(data["bert_input"], data["segment_label"])
 
             # 2-1. NLL(negative log likelihood) loss of is_next classification result
-            #print("next_sent_output", next_sent_output.shape, data["is_next"].shape)
+            print("next_sent_output", next_sent_output.shape, data["is_next"].shape)
             next_loss = self.criterion(next_sent_output, data["is_next"].squeeze())
+
+            logging.info(f'Next loss: {next_loss}')
 
 
             # 2-2. NLLLoss of predicting masked token word
             mask_loss = self.criterion(mask_lm_output.transpose(1, 2), data["bert_label"])
 
+            logging.info(f'Mask loss: {mask_loss}')
+
 
             # 2-3. Adding next_loss and mask_loss : 3.4 Pre-training Procedure
             loss = next_loss + mask_loss
+
+            logging.info(f'Loss: {loss}')
 
            
 
