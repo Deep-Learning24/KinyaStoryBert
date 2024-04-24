@@ -33,6 +33,9 @@ class BERTInference:
                 generated = batch['bert_input']
                 segment_label = batch['segment_label']
                 break
+            # Move the generated tensor to the device
+            generated = generated.to(self.device)
+            segment_label = segment_label.to(self.device)
             # delete the starting text temp file
             os.remove(starting_text_temp_file)
     
