@@ -1,3 +1,4 @@
+import os
 from torch.utils.data import Dataset
 import tqdm
 import torch
@@ -16,15 +17,13 @@ class KinyaStoryNewDataset(Dataset):
 
         with open(corpus_path, "r", encoding=encoding) as f:
             if self.corpus_lines is None and not on_memory:
-                for line in tqdm.tqdm(f, desc="Loading Dataset", total=corpus_lines):
-                    if line.strip():  # Skip empty lines
-                        self.corpus_lines += 1
+                for _ in tqdm.tqdm(f, desc="Loading Dataset", total=corpus_lines):
+                    self.corpus_lines += 1
 
             if on_memory:
-                self.lines = [line[:-1].split("\t") for line in tqdm.tqdm(f, desc="Loading Dataset", total=corpus_lines) if line.strip()]
+                self.lines = [line[:-1].split("\t")
+                              for line in tqdm.tqdm(f, desc="Loading Dataset", total=corpus_lines)]
                 self.corpus_lines = len(self.lines)
-                #print("Length of lines list:", len(self.lines))  # Add this line to check the length
-
 
         if not on_memory:
             self.file = open(corpus_path, "r", encoding=encoding)
@@ -38,6 +37,9 @@ class KinyaStoryNewDataset(Dataset):
 
     def __getitem__(self, item):
         t1, t2, is_next_label = self.random_sent(item)
+
+        # print("t1: ", t1)
+        # print("t2: ", t2)
         t1_random, t1_label = self.random_word(t1)
         t2_random, t2_label = self.random_word(t2)
 
@@ -59,6 +61,8 @@ class KinyaStoryNewDataset(Dataset):
                   "bert_label": bert_label,
                   "segment_label": segment_label,
                   "is_next": is_next_label}
+        
+        print("output: ", output)
 
         return {key: torch.tensor(value) for key, value in output.items()}
 
@@ -102,31 +106,74 @@ class KinyaStoryNewDataset(Dataset):
 
     def get_corpus_line(self, item):
         if self.on_memory:
-            line = self.lines[item]
-            return line[0], line[1] if len(line) > 1 else ""
+            while True: # Skip empty lines
+                if item >= len(self.lines):
+                    return None, None
+                line  = self.lines[item][0]
+                if line.strip():
+                    break
+                item += 1
+            next_item = item + 1
+
+            #print("self.lines[item]: ", self.lines[item])
+            #print("self.lines[item][0]: ", self.lines[item][0])
+            while True:  # Skip empty lines for the next line
+                if next_item >= len(self.lines):
+                    next_line = None
+                    break
+                next_line = self.lines[next_item][0]
+                if next_line.strip():  # If the line is not empty
+                    break
+                next_item += 1  # Go to the next line
+            
+            # print("self.lines[item][0]: ", self.lines[item][0])
+            # print("next_line: ", next_line)
+
+            return self.lines[item][0], next_line
         else:
+            # Rest of your code
             line = self.file.__next__()
             if line is None:
                 self.file.close()
                 self.file = open(self.corpus_path, "r", encoding=self.encoding)
                 line = self.file.__next__()
+    
+            t1 = line[:-1]
+            line = self.file.__next__()
+            if line is None:
+                t2 = None
+            else:
+                t2 = line[:-1]
+            
+            self.file.__next__()  # Skip the next line
 
-            t1, t2 = line[:-1].split("\t") if '\t' in line else (line[:-1], "")
             return t1, t2
 
     def get_random_line(self):
         if self.on_memory:
-            while True:
-                line = random.choice(self.lines)
-                if len(line) > 1 and line[1]:  # Ensure the line is not empty and has at least two elements
-                    return line[1]
-
-        line = self.file.__next__()
-        if line is None:
-            self.file.close()
-            self.file = open(self.corpus_path, "r", encoding=self.encoding)
-            for _ in range(random.randint(self.corpus_lines if self.corpus_lines < 1000 else 1000)):
-                self.random_file.__next__()
-            line = self.random_file.__next__()
-        return line[:-1].split("\t")[1]
-
+            while True:  # Skip empty lines for the current line
+                item = random.randrange(len(self.lines))
+                line = self.lines[item][0]
+                if line.strip():  # If the line is not empty
+                    break
+    
+            next_item = item + 1
+            while True:  # Skip empty lines for the next line
+                if next_item >= len(self.lines):
+                    next_line = None
+                    break
+                next_line = self.lines[next_item][0]
+                if next_line.strip():  # If the line is not empty
+                    break
+                next_item += 1  # Go to the next line
+    
+            return next_line
+        else:
+            line = ""
+            while not line.strip():  # Skip empty lines
+                self.file.seek(0, os.SEEK_END)
+                pos = random.randint(0, self.file.tell())
+                self.file.seek(pos)
+                self.file.readline()  # This is for line completeness
+                line = self.file.readline()
+            return line[:-1]  # Return the line itself, not a split element
