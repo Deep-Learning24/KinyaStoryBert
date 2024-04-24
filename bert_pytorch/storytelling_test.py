@@ -5,7 +5,7 @@ import torch
 sys.path.append('../')
 from model import BERT
 from trainer import KinyaStoryBERTTrainer
-from .dataset import KinyaStoryNewDataset
+from .dataset.kinya_new_dataset import KinyaStoryNewDataset
 from transformers import AutoTokenizer
 import os
 from KinyaTokenizer import KinyaTokenizer, encode, decode
