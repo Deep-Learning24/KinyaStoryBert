@@ -111,7 +111,7 @@ class KinyaStoryBERTTrainer:
             id ="kinya-bert-training_new", ### Insert specific run id here if you want to resume a previous run
             #resume = "must", ### You need this to resume previous runs, but comment out reinit = True when using this
             )
-        #wandb.watch(self.model, log="all")
+        wandb.watch(self.model, log="all")
         
         self.best_loss = float('inf')
         
@@ -218,8 +218,8 @@ class KinyaStoryBERTTrainer:
             if i % self.log_freq == 0:
                 data_iter.write(str(post_fix))
 
-        print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_iter), "total_acc=",
-              total_correct * 100.0 / total_element)
+        # print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_iter), "total_acc=",
+        #       total_correct * 100.0 / total_element)
         
         wandb.log({"avg_loss": avg_loss / len(data_iter), "total_acc": total_correct * 100.0 / total_element})
 
