@@ -111,7 +111,7 @@ class KinyaStoryBERTTrainer:
             id ="kinya-bert-training_new", ### Insert specific run id here if you want to resume a previous run
             #resume = "must", ### You need this to resume previous runs, but comment out reinit = True when using this
             )
-        wandb.watch(self.model, log="all")
+        #wandb.watch(self.model, log="all")
         
         self.best_loss = float('inf')
         
