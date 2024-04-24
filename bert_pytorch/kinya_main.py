@@ -79,17 +79,16 @@ def train():
     
     for epoch in range(args.epochs):
         trainer.train(epoch)
-    
-        # Get the average loss for the current epoch
-        current_loss = trainer.get_average_loss()
-    
-        # If the current loss is lower than the best loss, save the model and update the best loss
-        if current_loss < best_loss:
-            trainer.save(epoch, args.output_path)
-            best_loss = current_loss
-    
+
         if test_data_loader is not None:
             trainer.test(epoch)
+             # Get the average loss for the current epoch
+            current_loss = trainer.get_average_loss()
+        
+            # If the current loss is lower than the best loss, save the model and update the best loss
+            if current_loss < best_loss:
+                trainer.save(epoch, args.output_path)
+                best_loss = current_loss
 
 if __name__ == "__main__":
     train()
