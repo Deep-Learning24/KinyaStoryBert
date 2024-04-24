@@ -92,39 +92,42 @@ class KinyaTokenizer(object):
         df = pd.read_csv(self.dataset_path)
         train_df, val_df = train_test_split(df, test_size=validation_split, random_state=42)
     
-        def tokenize_and_save(df, filename):
+        def tokenize_and_save(df, filename,text_file="stories.txt"):
             tokenized_data = []
-            for _, row in df.iterrows():
-                story_input = str(row['story_input'])
-                story_output = str(row['story_output'])
-    
-                # Decide whether the story_output is the actual next sentence or a random sentence
-                if random.random() < 0.5:
-                    # The story_output is the next sentence
-                    is_next = 1
-                else:
-                    # The story_output is a random sentence
-                    story_output = df.sample(n=1)['story_output'].values[0]
-                    is_next = 0
-    
-                story = story_input + ' [SEP] ' + story_output
-    
-                # Divide the story into chunks of max_length tokens
-                story_chunks = [story[i:i + max_length] for i in range(0, len(story), max_length)]
-    
-                # Encode the chunks
-                for chunk in story_chunks:
-                    tokenized_sequence = encode(self.tokenizer, chunk)
-                    # Append the is_next label to the tokenized sequence
-                    tokenized_sequence = (tokenized_sequence[0], tokenized_sequence[1], is_next)
-                    tokenized_data.append(tokenized_sequence)
+            with open(text_file, 'w') as f:
+            
+                for _, row in df.iterrows():
+                    story_input = str(row['story_input'])
+                    story_output = str(row['story_output'])
+        
+                    # Decide whether the story_output is the actual next sentence or a random sentence
+                    if random.random() < 0.5:
+                        # The story_output is the next sentence
+                        is_next = 1
+                    else:
+                        # The story_output is a random sentence
+                        story_output = df.sample(n=1)['story_output'].values[0]
+                        is_next = 0
+        
+                    story = story_input + ' [SEP] ' + story_output
+        
+                    # Divide the story into chunks of max_length tokens
+                    story_chunks = [story[i:i + max_length] for i in range(0, len(story), max_length)]
+        
+                    # Encode the chunks
+                    for chunk in story_chunks:
+                        tokenized_sequence = encode(self.tokenizer, chunk)
+                        # Append the is_next label to the tokenized sequence
+                        tokenized_sequence = (tokenized_sequence[0], tokenized_sequence[1], is_next)
+                        tokenized_data.append(tokenized_sequence)
+                        f.write(chunk + '\n')
     
             # Save the tokenized data
             torch.save(tokenized_data, filename)
             return tokenized_data
     
-        tokenized_train_data = tokenize_and_save(train_df, 'tokenized_train_data.pt')
-        tokenized_val_data = tokenize_and_save(val_df, 'tokenized_val_data.pt')
+        tokenized_train_data = tokenize_and_save(train_df, 'tokenized_train_data.pt',text_file="kinyastory_data/train_stories.txt")
+        tokenized_val_data = tokenize_and_save(val_df, 'tokenized_val_data.pt',text_file="kinyastory_data/val_stories.txt")
     
         return tokenized_train_data, tokenized_val_data
 

@@ -6,14 +6,15 @@ sys.path.append('../')
 from model import BERT
 from trainer import KinyaStoryBERTTrainer
 from dataset.Kinya_storydataset import KinyaStoryBertDataset
+from dataset.kinya_new_dataset import KinyaStoryNewDataset
 from transformers import AutoTokenizer
 import os
 
 def train():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-c", "--train_dataset", required=True,default="tokenized_data.pt", type=str, help="train dataset for train bert")
-    parser.add_argument("-t", "--test_dataset", type=str, default="tokenized_val_data.pt", help="test set for evaluate train set")
+    parser.add_argument("-c", "--train_dataset", required=True,default="kinyastory_data/train_stories.txt", type=str, help="train dataset for train bert")
+    parser.add_argument("-t", "--test_dataset", type=str, default="kinyastory_data/val_stories.txt", help="test set for evaluate train set")
     parser.add_argument("-o", "--output_path", required=True, type=str, help="ex)output/bert.model")
     parser.add_argument("-p", "--last_saved_epoch", type=int, default=None, help="epoch of last saved model")
 
@@ -45,12 +46,14 @@ def train():
     print("Vocab Size: ", len(vocab))
 
     print("Loading Train Dataset", args.train_dataset)
-    train_dataset = KinyaStoryBertDataset(vocab, seq_len=args.seq_len, tokenized_data_file_path=args.train_dataset)
+    train_dataset = KinyaStoryNewDataset(args.train_dataset, vocab, seq_len=args.seq_len,
+                                corpus_lines=args.corpus_lines, on_memory=args.on_memory)
     print("Train Dataset Size: ", len(train_dataset))
 
     print("Loading Test Dataset", args.test_dataset)
-    test_dataset = KinyaStoryBertDataset(vocab, seq_len=args.seq_len, tokenized_data_file_path=args.test_dataset) \
+    test_dataset = KinyaStoryNewDataset(args.test_dataset, vocab, seq_len=args.seq_len, on_memory=args.on_memory) \
         if args.test_dataset is not None else None
+
 
     print("Creating Dataloader")
     train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers)

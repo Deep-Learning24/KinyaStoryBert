@@ -103,10 +103,10 @@ class KinyaStoryBERTTrainer:
         wandb.init(
             project=wandb_project_name, 
             config=self.config,
-            name = "kinya-bert-training", ## Wandb creates random run names if you skip this field
-            #reinit = True, ### Allows reinitalizing runs when you re-run this cell
-            id ="kinya-bert-training", ### Insert specific run id here if you want to resume a previous run
-            resume = "must", ### You need this to resume previous runs, but comment out reinit = True when using this
+            name = "kinya-bert-training_new", ## Wandb creates random run names if you skip this field
+            reinit = True, ### Allows reinitalizing runs when you re-run this cell
+            id ="kinya-bert-training_new", ### Insert specific run id here if you want to resume a previous run
+            #resume = "must", ### You need this to resume previous runs, but comment out reinit = True when using this
             )
         
         self.best_loss = float('inf')
@@ -151,12 +151,10 @@ class KinyaStoryBERTTrainer:
             #print("next_sent_output", next_sent_output.shape, data["is_next"].shape)
             next_loss = self.criterion(next_sent_output, data["is_next"].squeeze())
 
-            
 
             # 2-2. NLLLoss of predicting masked token word
             mask_loss = self.criterion(mask_lm_output.transpose(1, 2), data["bert_label"])
 
-            
 
             # 2-3. Adding next_loss and mask_loss : 3.4 Pre-training Procedure
             loss = next_loss + mask_loss

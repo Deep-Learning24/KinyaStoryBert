@@ -10,6 +10,7 @@ from transformers import AutoTokenizer
 import os
 from KinyaTokenizer import KinyaTokenizer, encode, decode
 from tqdm import tqdm
+
 class BERTInference:
     def __init__(self, model, tokenizer, device='cpu'):
         self.model = model
