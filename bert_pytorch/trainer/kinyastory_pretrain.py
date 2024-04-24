@@ -125,7 +125,7 @@ class KinyaStoryBERTTrainer:
     def iteration(self, epoch, data_loader, train=True):
         wandb.watch(self.model, log="all")
         
-        logging.info(f'Starting iteration, epoch: {epoch}, train: {train}')
+        #logging.info(f'Starting iteration, epoch: {epoch}, train: {train}')
     
         str_code = "train" if train else "test"
     
