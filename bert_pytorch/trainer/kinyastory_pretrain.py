@@ -110,7 +110,7 @@ class KinyaStoryBERTTrainer:
                 name = wandb_name, ## Wandb creates random run names if you skip this field
                 reinit = wandb_reinit, ### Allows reinitalizing runs when you re-run this cell
                 id =wandb_name, ### Insert specific run id here if you want to resume a previous run
-                resume = "must" ## Resume run if it exists
+                #resume = "must" ## Resume run if it exists
                 )
         else:
             wandb.init(
@@ -118,8 +118,8 @@ class KinyaStoryBERTTrainer:
                 config=self.config,
                 name = wandb_name, ## Wandb creates random run names if you skip this field
                 reinit = wandb_reinit, ### Allows reinitalizing runs when you re-run this cell
-                id =wandb_name ### Insert specific run id here if you want to resume a previous run
-                #resume = "must" ## Resume run if it exists
+                id =wandb_name, ### Insert specific run id here if you want to resume a previous run
+                resume = "must" ## Resume run if it exists
                 )
             
        
