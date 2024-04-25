@@ -220,8 +220,11 @@ class KinyaStoryBERTTrainer:
 
         # print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_iter), "total_acc=",
         #       total_correct * 100.0 / total_element)
+
+        if train:
+            wandb.log({"train_avg_loss": avg_loss / len(data_iter), "train_total_acc": total_correct * 100.0 / total_element})
         
-        wandb.log({"avg_loss": avg_loss / len(data_iter), "total_acc": total_correct * 100.0 / total_element})
+        # wandb.log({"avg_loss": avg_loss / len(data_iter), "total_acc": total_correct * 100.0 / total_element})
 
     def save(self, epoch, file_path="output/bert_trained.model"):
         """
