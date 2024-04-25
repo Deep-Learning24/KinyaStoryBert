@@ -14,7 +14,7 @@ from  torch.utils.data import DataLoader
 import wandb
 
 class KinyaStoryFinetune:
-    def __init__(self, model, tokenizer, device='cpu'):
+    def __init__(self, model:BERT, tokenizer, device='cpu'):
         self.model = model
         self.tokenizer = tokenizer
         self.device = device
@@ -32,7 +32,7 @@ class KinyaStoryFinetune:
                  with_cuda: bool = True, cuda_devices=None, log_freq: int = 10, wandb_project_name="project-ablations",wandb_name="kinya-bert-training_new",wandb_reinit=True,model_file_path="output/bert.model",last_saved_epoch=None):
         '''
 
-        trainer = KinyaStoryBERTTrainer(bert=self.model, vocab_size=len(self.vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader, lr=lr, betas=(adam_beta1, adam_beta2), weight_decay=adam_weight_decay, with_cuda=with_cuda, cuda_devices=cuda_devices, log_freq=log_freq, model_file_path=output_path, last_saved_epoch=last_saved_epoch,wandb_project_name="project-ablations", wandb_name="kinya-bert-finetuning", wandb_reinit=True)
+        trainer = KinyaStoryBERTTrainer(bert=self.model, vocab_size=len(self.vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader, lr=lr, betas=(adam_beta1, adam_beta2), weight_decay=adam_weight_decay, with_cuda=with_cuda, cuda_devices=cuda_devices, log_freq=log_freq, model_file_path=output_path, last_saved_epoch=last_saved_epoch,wandb_project_name="project-ablations", wandb_name="kinya-bert-finetuning", wandb_reinit=True,last_saved_epoch=last_saved_epoch)
         
         
         # Freeze the BERT model for the first 5 epochs
@@ -62,7 +62,7 @@ class KinyaStoryFinetune:
         :param freeze: If True, freeze the layers. If False, unfreeze the layers
         """
         layer_num = 0
-        for module in self.model.bert.encoder.layer:
+        for module in self.model.transformer_blocks:
             if layer_num < freeze_until_layer:
                 for param in module.parameters():
                     param.requires_grad = False if freeze else True
@@ -85,15 +85,15 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
     vocab = tokenizer.get_vocab()
     bert = BERT(len(vocab), hidden=args.hidden, n_layers=args.layers, attn_heads=args.attn_heads)
-    model = KinyaStoryBERTTrainer.load_model_from_path(epoch=args.last_saved_epoch, vocab_size=len(vocab),bert=bert, device=args.device)
+    # model = KinyaStoryBERTTrainer.load_model_from_path(epoch=args.last_saved_epoch, vocab_size=len(vocab),bert=bert, device=args.device)
     
-    kinya_story_finetune = KinyaStoryFinetune(model, tokenizer, device=args.device)
+    kinya_story_finetune = KinyaStoryFinetune(bert, tokenizer, device=args.device)
     train_dataset = KinyaStoryNewDataset(args.train_dataset, vocab, seq_len=args.seq_len, on_memory=True)
 
     if not os.path.exists(args.output_path):
         os.makedirs(args.output_path)
 
-    kinya_story_finetune.finetune(train_dataset, args.test_dataset, args.output_path, last_saved_epoch=args.epochs, batch_size=64, epochs=50, num_workers=5, with_cuda=True, log_freq=10, corpus_lines=None, cuda_devices=None, on_memory=True, lr=1e-3, adam_weight_decay=0.01, adam_beta1=0.9, adam_beta2=0.999)
+    kinya_story_finetune.finetune(train_dataset, args.test_dataset, args.output_path, last_saved_epoch=args.last_saved_epoch, batch_size=64, epochs=50, num_workers=5, with_cuda=True, log_freq=10, corpus_lines=None, cuda_devices=None, on_memory=True, lr=1e-3, adam_weight_decay=0.01, adam_beta1=0.9, adam_beta2=0.999,epochs=args.epochs)
 
     print("Finetuning complete")
 
