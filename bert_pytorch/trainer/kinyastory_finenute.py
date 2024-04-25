@@ -3,12 +3,12 @@ import sys
 
 import torch
 sys.path.append('../')
-from model import BERT
+from ..model import BERT
 from trainer import KinyaStoryBERTTrainer
-from dataset import KinyaStoryNewDataset
+from ..dataset import KinyaStoryNewDataset
 from transformers import AutoTokenizer
 import os
-from KinyaTokenizer import KinyaTokenizer, encode, decode
+from ..KinyaTokenizer import KinyaTokenizer, encode, decode
 from tqdm import tqdm
 from  torch.utils.data import DataLoader
 import wandb
