@@ -62,7 +62,12 @@ class KinyaStoryNewDataset(Dataset):
         corpus_path_file_name, _ = os.path.splitext(corpus_path)
         output_path = f"{corpus_path_file_name}_preprocessed.txt"
         final_output_path = f"{corpus_path_file_name}_final.txt"
-        preprocess_corpus(corpus_path, output_path, final_output_path)
+        # preprocess_corpus if the final file does not exist or if it is empty
+        if not os.path.exists(final_output_path) or os.stat(final_output_path).st_size == 0:
+            preprocess_corpus(corpus_path, output_path, final_output_path)
+
+        else:
+            print("Final file exists")
 
         with open(final_output_path, "r", encoding=encoding) as f:
             if self.corpus_lines is None and not on_memory:
