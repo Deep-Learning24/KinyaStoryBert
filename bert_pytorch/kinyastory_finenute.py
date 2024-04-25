@@ -32,7 +32,7 @@ class KinyaStoryFinetune:
                  with_cuda: bool = True, cuda_devices=None, log_freq: int = 10, wandb_project_name="project-ablations",wandb_name="kinya-bert-training_new",wandb_reinit=True,model_file_path="output/bert.model",last_saved_epoch=None):
         '''
 
-        trainer = KinyaStoryBERTTrainer(bert=self.model, vocab_size=len(self.vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader, lr=lr, betas=(adam_beta1, adam_beta2), weight_decay=adam_weight_decay, with_cuda=with_cuda, cuda_devices=cuda_devices, log_freq=log_freq, model_file_path=output_path, last_saved_epoch=last_saved_epoch,wandb_project_name="project-ablations", wandb_name="kinya-bert-finetuning", wandb_reinit=True)
+        trainer = KinyaStoryBERTTrainer(bert=self.model, vocab_size=len(self.vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader, lr=lr, betas=(adam_beta1, adam_beta2), weight_decay=adam_weight_decay, with_cuda=with_cuda, cuda_devices=cuda_devices, log_freq=log_freq, model_file_path=output_path, last_saved_epoch=last_saved_epoch,wandb_project_name="project-ablations", wandb_name="kinya-bert-finetuning", wandb_reinit=True,is_finetune=True)
         
         
         # Freeze the BERT model for the first 5 epochs

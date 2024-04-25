@@ -27,7 +27,7 @@ class KinyaStoryBERTTrainer:
     def __init__(self, bert: BERT, vocab_size: int,
                  train_dataloader: DataLoader, test_dataloader: DataLoader = None,
                  lr: float = 1e-4, betas=(0.9, 0.999), weight_decay: float = 0.01, warmup_steps=10000,
-                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10, wandb_project_name="project-ablations",wandb_name="kinya-bert-training_new",wandb_reinit=True,model_file_path="output/bert.model",last_saved_epoch=None):
+                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10, wandb_project_name="project-ablations",wandb_name="kinya-bert-training_new",wandb_reinit=True,model_file_path="output/bert.model",last_saved_epoch=None,is_finetune=False):
         """
         :param bert: BERT model which you want to train
         :param vocab_size: total word vocab size
@@ -102,7 +102,25 @@ class KinyaStoryBERTTrainer:
         logging.info(f'Initialized BERT trainer with cuda: {cuda_condition}, device: {self.device}')
         logging.info(f'Total Parameters: {sum([p.nelement() for p in self.model.parameters()])}')
         wandb.login(key="3644f3d76a394594794c1b136a20f75303e871ba")
-
+        if wandb_reinit:
+            wandb.init(
+                project=wandb_project_name, 
+                config=self.config,
+                name = wandb_name, ## Wandb creates random run names if you skip this field
+                reinit = wandb_reinit, ### Allows reinitalizing runs when you re-run this cell
+                id =wandb_name, ### Insert specific run id here if you want to resume a previous run
+                resume = "must" ## Resume run if it exists
+                )
+        else:
+            wandb.init(
+                project=wandb_project_name, 
+                config=self.config,
+                name = wandb_name, ## Wandb creates random run names if you skip this field
+                reinit = wandb_reinit, ### Allows reinitalizing runs when you re-run this cell
+                id =wandb_name ### Insert specific run id here if you want to resume a previous run
+                #resume = "must" ## Resume run if it exists
+                )
+            
         wandb.init(
             project=wandb_project_name, 
             config=self.config,
