@@ -89,8 +89,8 @@ def main():
     # model = KinyaStoryBERTTrainer.load_model_from_path(epoch=args.last_saved_epoch, vocab_size=len(vocab),bert=bert, device=args.device)
     
     kinya_story_finetune = KinyaStoryFinetune(bert, tokenizer, device=args.device)
-    train_dataset = KinyaStoryNewDataset(args.train_dataset, vocab, seq_len=args.seq_len, on_memory=True)
-    test_dataset = KinyaStoryNewDataset(args.test_dataset, vocab, seq_len=args.seq_len, on_memory=True) if args.test_dataset is not None else None
+    train_dataset = KinyaStoryNewDataset(args.train_dataset, vocab, seq_len=args.seq_len, on_memory=False)
+    test_dataset = KinyaStoryNewDataset(args.test_dataset, vocab, seq_len=args.seq_len, on_memory=False) if args.test_dataset is not None else None
 
     if not os.path.exists(args.output_path):
         os.makedirs(args.output_path)
