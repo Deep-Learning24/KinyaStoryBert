@@ -27,7 +27,7 @@ class KinyaStoryBERTTrainer:
     def __init__(self, bert: BERT, vocab_size: int,
                  train_dataloader: DataLoader, test_dataloader: DataLoader = None,
                  lr: float = 1e-4, betas=(0.9, 0.999), weight_decay: float = 0.01, warmup_steps=10000,
-                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10, wandb_project_name="project-ablations",wandb_name="kinya-bert-training_new",wandb_reinit=True,model_file_path="output/bert.model",last_saved_epoch=None,is_finetune=False):
+                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10, wandb_project_name="project-ablations",wandb_name="kinya-bert-training_new",wandb_reinit=True,model_file_path="output/bert.model",last_saved_epoch=None,fine_tuned_file_path=None):
         """
         :param bert: BERT model which you want to train
         :param vocab_size: total word vocab size
@@ -59,13 +59,14 @@ class KinyaStoryBERTTrainer:
         self.test_data = test_dataloader
 
         self.last_saved_epoch = last_saved_epoch
+        self.fine_tuned_file_path = fine_tuned_file_path
 
         # Setting the Adam optimizer with hyper-param
         self.optim = Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
         self.optim_schedule = ScheduledOptim(self.optim, self.bert.hidden, n_warmup_steps=warmup_steps)
 
         #Save the model's state dict
-        torch.save(self.model.state_dict(), "output/model_state_dict.pth")
+        #torch.save(self.model.state_dict(), "output/model_state_dict.pth")
 
         # Using Negative Log Likelihood Loss function for predicting the masked_token
         self.criterion = nn.NLLLoss(ignore_index=0)
@@ -121,14 +122,7 @@ class KinyaStoryBERTTrainer:
                 #resume = "must" ## Resume run if it exists
                 )
             
-        wandb.init(
-            project=wandb_project_name, 
-            config=self.config,
-            name = wandb_name, ## Wandb creates random run names if you skip this field
-            reinit = wandb_reinit, ### Allows reinitalizing runs when you re-run this cell
-            id =wandb_name, ### Insert specific run id here if you want to resume a previous run
-            resume = "must" if wandb_reinit else "never" ## Resume run if it exists
-            )
+       
         wandb.watch(self.model, log="all")
         
         self.best_loss = float('inf')
@@ -256,6 +250,7 @@ class KinyaStoryBERTTrainer:
         :param file_path: model output path which gonna be file_path+"ep%d" % epoch
         :return: final_output_path
         """
+        file_path = self.fine_tuned_file_path if self.fine_tuned_file_path is not None else file_path
      
         output_path = file_path + ".ep%d" % epoch
     
