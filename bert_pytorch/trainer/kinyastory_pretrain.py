@@ -136,7 +136,7 @@ class KinyaStoryBERTTrainer:
         data_iter = tqdm.tqdm(enumerate(data_loader),
                               desc="EP_%s:%d" % (str_code, epoch),
                               total=len(data_loader),
-                              bar_format="{l_bar}{r_bar}")
+                              bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
     
         avg_loss = 0.0
         total_correct = 0
@@ -215,11 +215,12 @@ class KinyaStoryBERTTrainer:
                 self.best_loss = avg_loss / (i + 1)
                 
                 
-            if i % self.log_freq == 0:
-                data_iter.write(str(post_fix))
+            # if i % self.log_freq == 0:
+            #     data_iter.write(str(post_fix))
+            data_iter.set_postfix(post_fix)
 
-        # print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_iter), "total_acc=",
-        #       total_correct * 100.0 / total_element)
+        print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_iter), "total_acc=",
+              total_correct * 100.0 / total_element)
 
         if train:
             wandb.log({"train_avg_loss": avg_loss / len(data_iter), "train_total_acc": total_correct * 100.0 / total_element})
