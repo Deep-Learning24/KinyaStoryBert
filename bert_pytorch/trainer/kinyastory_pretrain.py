@@ -27,7 +27,7 @@ class KinyaStoryBERTTrainer:
     def __init__(self, bert: BERT, vocab_size: int,
                  train_dataloader: DataLoader, test_dataloader: DataLoader = None,
                  lr: float = 1e-4, betas=(0.9, 0.999), weight_decay: float = 0.01, warmup_steps=10000,
-                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10, wandb_project_name="project-ablations",model_file_path="output/bert.model",last_saved_epoch=None):
+                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10, wandb_project_name="project-ablations",wandb_name="kinya-bert-training_new",wandb_reinit=True,model_file_path="output/bert.model",last_saved_epoch=None):
         """
         :param bert: BERT model which you want to train
         :param vocab_size: total word vocab size
@@ -106,26 +106,29 @@ class KinyaStoryBERTTrainer:
         wandb.init(
             project=wandb_project_name, 
             config=self.config,
-            name = "kinya-bert-training_new", ## Wandb creates random run names if you skip this field
-            reinit = True, ### Allows reinitalizing runs when you re-run this cell
-            id ="kinya-bert-training_new", ### Insert specific run id here if you want to resume a previous run
-            #resume = "must", ### You need this to resume previous runs, but comment out reinit = True when using this
+            name = wandb_name, ## Wandb creates random run names if you skip this field
+            reinit = wandb_reinit, ### Allows reinitalizing runs when you re-run this cell
+            id =wandb_name, ### Insert specific run id here if you want to resume a previous run
+            resume = "must" if wandb_reinit else "never" ## Resume run if it exists
             )
         wandb.watch(self.model, log="all")
         
         self.best_loss = float('inf')
         
-
+    @staticmethod
     def train(self, epoch):
         
         self.iteration(epoch, self.train_data)
-
+    
+    @staticmethod
     def test(self, epoch):
         self.iteration(epoch, self.test_data, train=False)
 
+    @staticmethod
     def get_average_loss(self):
         return self.best_loss
     
+    @staticmethod
     def iteration(self, epoch, data_loader, train=True):
         
         
