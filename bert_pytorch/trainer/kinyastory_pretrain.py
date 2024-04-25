@@ -1,3 +1,4 @@
+import gc
 import os
 import torch
 import torch.nn as nn
@@ -234,11 +235,16 @@ class KinyaStoryBERTTrainer:
             #     data_iter.write(str(post_fix))
             data_iter.set_postfix(post_fix)
 
+            torch.cuda.empty_cache()
+            gc.collect()
+
         print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_iter), "total_acc=",
               total_correct * 100.0 / total_element)
 
-        if train:
-            wandb.log({"train_avg_loss": avg_loss / len(data_iter), "train_total_acc": total_correct * 100.0 / total_element})
+        
+        wandb.log({"train_avg_loss": avg_loss / len(data_iter), "train_total_acc": total_correct * 100.0 / total_element})
+
+
         
         # wandb.log({"avg_loss": avg_loss / len(data_iter), "total_acc": total_correct * 100.0 / total_element})
 
