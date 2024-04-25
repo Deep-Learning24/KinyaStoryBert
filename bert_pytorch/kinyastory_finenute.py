@@ -93,7 +93,7 @@ def main():
     if not os.path.exists(args.output_path):
         os.makedirs(args.output_path)
 
-    kinya_story_finetune.finetune(train_dataset, args.test_dataset, args.output_path, last_saved_epoch=args.last_saved_epoch, batch_size=64, epochs=50, num_workers=5, with_cuda=True, log_freq=10, corpus_lines=None, cuda_devices=None, on_memory=True, lr=1e-3, adam_weight_decay=0.01, adam_beta1=0.9, adam_beta2=0.999,epochs=args.epochs)
+    kinya_story_finetune.finetune(train_dataset, args.test_dataset, args.output_path, last_saved_epoch=args.last_saved_epoch, batch_size=64, epochs=args.epochs, num_workers=5, with_cuda=True, log_freq=10, corpus_lines=None, cuda_devices=None, on_memory=True, lr=1e-3, adam_weight_decay=0.01, adam_beta1=0.9, adam_beta2=0.999)
 
     print("Finetuning complete")
 
