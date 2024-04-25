@@ -21,7 +21,7 @@ class KinyaStoryFinetune:
         self.vocab = tokenizer.get_vocab()
 
     
-    def finetune(self, train_dataset, test_dataset, output_path, last_saved_epoch=None, batch_size=64, epochs=10, num_workers=5, with_cuda=True, log_freq=10, corpus_lines=None, cuda_devices=None, on_memory=True, lr=1e-3, adam_weight_decay=0.01, adam_beta1=0.9, adam_beta2=0.999):
+    def finetune(self, train_dataset, output_path, last_saved_epoch=None, batch_size=64,test_dataset=None, epochs=10, num_workers=5, with_cuda=True, log_freq=10, corpus_lines=None, cuda_devices=None, on_memory=True, lr=1e-3, adam_weight_decay=0.01, adam_beta1=0.9, adam_beta2=0.999):
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
         test_data_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers) if test_dataset is not None else None
         
@@ -93,7 +93,7 @@ def main():
     if not os.path.exists(args.output_path):
         os.makedirs(args.output_path)
 
-    kinya_story_finetune.finetune(train_dataset, args.test_dataset, args.output_path, last_saved_epoch=args.last_saved_epoch, batch_size=64, epochs=args.epochs, num_workers=5, with_cuda=True, log_freq=10, corpus_lines=None, cuda_devices=None, on_memory=True, lr=1e-3, adam_weight_decay=0.01, adam_beta1=0.9, adam_beta2=0.999)
+    kinya_story_finetune.finetune(train_dataset, args.output_path, last_saved_epoch=args.last_saved_epoch, batch_size=64,test_dataset=args.test_dataset, epochs=args.epochs, num_workers=5, with_cuda=True, log_freq=10, corpus_lines=None, cuda_devices=None, on_memory=True, lr=1e-3, adam_weight_decay=0.01, adam_beta1=0.9, adam_beta2=0.999)
 
     print("Finetuning complete")
 
