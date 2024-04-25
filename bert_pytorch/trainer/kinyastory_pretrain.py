@@ -115,20 +115,20 @@ class KinyaStoryBERTTrainer:
         
         self.best_loss = float('inf')
         
-    @staticmethod
+    
     def train(self, epoch):
         
         self.iteration(epoch, self.train_data)
     
-    @staticmethod
+    
     def test(self, epoch):
         self.iteration(epoch, self.test_data, train=False)
 
-    @staticmethod
+    
     def get_average_loss(self):
         return self.best_loss
     
-    @staticmethod
+    
     def iteration(self, epoch, data_loader, train=True):
         
         
@@ -268,7 +268,7 @@ class KinyaStoryBERTTrainer:
         
         return self.model
     
-    @staticmethod
+    
     def load_model_from_path(epoch,vocab_size,bert,device="cpu",warmup_steps=10000,lr: float = 1e-4, betas=(0.9, 0.999), weight_decay: float = 0.01):
         # This BERT model will be saved every epoch
         bert = bert
