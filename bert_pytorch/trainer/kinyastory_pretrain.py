@@ -288,7 +288,7 @@ class KinyaStoryBERTTrainer:
         return self.model
     
     
-    def load_model_from_path(epoch,vocab_size,bert,device="cpu",warmup_steps=10000,lr: float = 1e-4, betas=(0.9, 0.999), weight_decay: float = 0.01):
+    def load_model_from_path(epoch,vocab_size,bert,device="cpu",warmup_steps=10000,lr: float = 1e-4, betas=(0.9, 0.999), weight_decay: float = 0.01,is_inference=False):
         # This BERT model will be saved every epoch
         bert = bert
         # Initialize the BERT Language Model, with BERT model
@@ -301,8 +301,8 @@ class KinyaStoryBERTTrainer:
         optim = Adam(model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
         optim_schedule = ScheduledOptim(optim, bert.hidden, n_warmup_steps=warmup_steps)
 
-       
-        model_path = "output/bert.model" + ".ep%d" % epoch
+        path = "output/bert.model" if not is_inference else "output/bert.model_finetuned"
+        model_path = path + ".ep%d" % epoch
 
         if not os.path.exists(model_path):
             print(f"Model file {model_path} not found")

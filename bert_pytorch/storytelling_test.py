@@ -27,7 +27,7 @@ class BERTInference:
                 f.write(starting_text+'\n')
     
             inference_dataset = KinyaStoryNewDataset(corpus_path=starting_text_temp_file, vocab=self.vocab, seq_len=128)
-            inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=1, shuffle=False)
+            inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=4, shuffle=False)
     
             for batch in inference_loader:
                 generated = batch['bert_input']
@@ -96,7 +96,7 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
     vocab = tokenizer.get_vocab()
     bert = BERT(len(vocab), hidden=args.hidden, n_layers=args.layers, attn_heads=args.attn_heads)
-    model = KinyaStoryBERTTrainer.load_model_from_path(epoch=args.epoch, vocab_size=len(vocab),bert=bert, device=args.device)
+    model = KinyaStoryBERTTrainer.load_model_from_path(epoch=args.epoch, vocab_size=len(vocab),bert=bert, device=args.device,is_inference=True)
     bert_inference = BERTInference(model, tokenizer, device=args.device)
     print(bert_inference.generate_text(args.text))
 
