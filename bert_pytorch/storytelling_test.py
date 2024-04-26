@@ -117,7 +117,7 @@ class BERTInference:
                 masked_indices = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
                 
                 for idx in masked_indices:
-                    next_masked = torch.argmax(predictions_masked[idx, :], dim=-1)
+                    next_masked = torch.argmax(predictions_masked[idx, :], dim=-1).item()
                     generated[0, idx] = next_masked
                 
                 
