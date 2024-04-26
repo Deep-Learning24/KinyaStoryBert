@@ -301,9 +301,18 @@ class KinyaStoryBERTTrainer:
         optim = Adam(model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
         optim_schedule = ScheduledOptim(optim, bert.hidden, n_warmup_steps=warmup_steps)
 
-        path = "output/bert.model" if not is_inference else "output/bert.model_finetuned"
-        model_path = path + ".ep%d" % epoch
+        pretrain_model_path = "output/bert.model"
+        fine_tuned_model_path = "output/bert.model_finetuned"
 
+
+        if not os.path.exists(fine_tuned_model_path + ".ep%d" % epoch):
+            print("There is no fine-tuned model for epoch %d , let us use the pretrained.." % epoch)
+            fine_tuned_model_path = pretrain_model_path
+
+        path = pretrain_model_path if not is_inference else fine_tuned_model_path
+
+        model_path = path + ".ep%d" % epoch
+        
         if not os.path.exists(model_path):
             print(f"Model file {model_path} not found")
             return None
