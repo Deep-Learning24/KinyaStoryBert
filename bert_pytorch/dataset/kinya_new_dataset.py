@@ -43,7 +43,7 @@ def preprocess_corpus(corpus_path, output_path, final_output_path):
 
 
 class KinyaStoryNewDataset(Dataset):
-    def __init__(self, corpus_path, vocab, seq_len, encoding="ISO-8859-1", corpus_lines=None, on_memory=True):
+    def __init__(self, corpus_path, vocab, seq_len, encoding="ISO-8859-1", corpus_lines=None, on_memory=True,is_inference=False):
         self.vocab = vocab
         self.seq_len = seq_len
 
@@ -63,11 +63,14 @@ class KinyaStoryNewDataset(Dataset):
         output_path = f"{corpus_path_file_name}_preprocessed.txt"
         final_output_path = f"{corpus_path_file_name}_final.txt"
         # preprocess_corpus if the final file does not exist or if it is empty
-        if not os.path.exists(final_output_path) or os.stat(final_output_path).st_size == 0:
+        if is_inference:
             preprocess_corpus(corpus_path, output_path, final_output_path)
-
         else:
-            print("Final file exists")
+            if not os.path.exists(final_output_path) or os.stat(final_output_path).st_size == 0:
+                preprocess_corpus(corpus_path, output_path, final_output_path)
+
+            else:
+                print("Final file exists")
 
         with open(final_output_path, "r", encoding=encoding) as f:
             if self.corpus_lines is None and not on_memory:

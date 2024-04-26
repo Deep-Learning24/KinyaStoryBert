@@ -26,7 +26,7 @@ class BERTInference:
             with open(starting_text_temp_file, 'w') as f:
                 f.write(starting_text+'\n')
     
-            inference_dataset = KinyaStoryNewDataset(corpus_path=starting_text_temp_file, vocab=self.vocab, seq_len=128)
+            inference_dataset = KinyaStoryNewDataset(corpus_path=starting_text_temp_file, vocab=self.vocab, seq_len=128,is_inference=True)
             inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=4, shuffle=False)
     
             for batch in inference_loader:
