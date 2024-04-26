@@ -173,7 +173,7 @@ class KinyaStoryBERTTrainer:
     
              # 1. forward the next_sentence_prediction and masked_lm model
             next_sent_output, mask_lm_output = self.model.forward(data["bert_input"], data["segment_label"])
-
+            # x[:,0] is next token confidence
             # logging.info(f'Next sent output shape: {next_sent_output.shape}')
             # logging.info(f'Mask LM output shape: {mask_lm_output.shape}')
             # logging.info(f'Next sent output: {decode(self.tokenizer, next_sent_output.argmax(dim=-1).tolist())}')

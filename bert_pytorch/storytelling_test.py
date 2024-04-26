@@ -28,7 +28,7 @@ class BERTInference:
             starting_text_temp_file = 'kinyastory_data/starting_text_temp.txt'
             with open(starting_text_temp_file, 'w') as f:
                 f.write(starting_text+'\n')
-    
+
             inference_dataset = KinyaStoryNewDataset(corpus_path=starting_text_temp_file, vocab=self.vocab, seq_len=128,is_inference=True)
             inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=4, shuffle=False)
 
@@ -56,23 +56,26 @@ class BERTInference:
                     predictions_masked = predictions[0].squeeze(0).to(self.device)
                     predictions_next = predictions[1].squeeze(0).to(self.device)
                     
-                    # Replace the masked token in the input with the predicted masked token
-                    masked_index = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
-                    
-                    if masked_index.size(0) > 0:
-                        if predictions_masked.dim() > 1:
-                            next_masked = torch.argmax(predictions_masked[masked_index[0], :], dim=-1).unsqueeze(0)
-                        else:
-                            next_masked = torch.argmax(predictions_masked, dim=-1).unsqueeze(0)
-                        generated[0, masked_index[0]] = next_masked
+                    # Replace the masked tokens in the input with the predicted masked tokens
+                    masked_indices = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
 
+                    # Replace the masked tokens in the input with the predicted masked tokens
+                    masked_indices = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
+                    
+                    for idx in masked_indices:
+                        next_masked = torch.argmax(predictions_masked[idx, :], dim=-1)
+                        generated[0, idx] = next_masked
+                    
+                    
                     # Append the predicted next word token to the input
                     next_word = torch.argmax(predictions_next[-1, :], dim=-1).unsqueeze(0)
 
-                    # Check if the predicted next word is the padding token
-                    if next_word.item() == self.vocab['[PAD]']:
+                    # Early stopping condition
+                    if next_word.item() == self.vocab['[PAD]'] or generated.size(1) > max_length:
                         print(f"Stopping generation at padding token {next_word.item()}")
                         return decode(self.tokenizer, generated.squeeze().tolist())
+                        
+
 
                     generated = torch.cat((generated, next_word.unsqueeze(0)), dim=1)
 
