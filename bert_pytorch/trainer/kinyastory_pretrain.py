@@ -235,8 +235,8 @@ class KinyaStoryBERTTrainer:
             #     data_iter.write(str(post_fix))
             data_iter.set_postfix(post_fix)
 
-            torch.cuda.empty_cache()
-            gc.collect()
+            # torch.cuda.empty_cache()
+            # gc.collect()
 
         print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_iter), "total_acc=",
               total_correct * 100.0 / total_element)
