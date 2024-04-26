@@ -116,9 +116,10 @@ class BERTInference:
                 # Replace the masked tokens in the input with the predicted masked tokens
                 masked_indices = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
                 
-                for idx in masked_indices:
-                    next_masked = torch.argmax(predictions_masked[idx, :], dim=-1)
-                    generated[0, idx] = next_masked
+                for i in range(generated.shape[0]):  # iterate over the sequence dimension
+                    for idx in masked_indices:
+                        next_masked = torch.argmax(predictions_masked[i, idx, :], dim=-1).item()
+                        generated[i, idx] = next_masked
                 
                 
                 # Append the predicted next word token to the input
