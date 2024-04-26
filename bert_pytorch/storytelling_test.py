@@ -89,8 +89,9 @@ class BERTInference:
                 print("The generated text is: ", decode(self.tokenizer, generated.squeeze().tolist()))
                 
                 predictions = self.model.forward(generated, segment_label)
-                predictions_masked = predictions[0].squeeze(0).to(self.device)
-                predictions_next = predictions[1].squeeze(0).to(self.device)
+               
+                predictions_masked = predictions[0]
+                predictions_next = predictions[1]
 
                 label_loss = calculate_nll(predictions_masked.transpose(1, 2), label)
                 label_perplexity = calculate_perplexity(label_loss)
@@ -103,7 +104,9 @@ class BERTInference:
                 total_loss = label_loss + next_loss
                 total_perplexity = calculate_perplexity(total_loss)
                 print(f"Total loss: {total_loss}, Total perplexity: {total_perplexity}")
-
+               
+                predictions_masked = predictions[0].squeeze(0).to(self.device)
+                predictions_next = predictions[1].squeeze(0).to(self.device)
                 
                 # Replace the masked tokens in the input with the predicted masked tokens
                 masked_indices = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
