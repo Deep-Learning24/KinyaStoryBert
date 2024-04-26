@@ -76,6 +76,10 @@ class BERTInference:
             segment_label = data['segment_label']
             label = data['bert_label']
             is_next = data['is_next']
+
+            # Skip this iteration if is_next is empty
+            if is_next.nelement() == 0:
+                continue
             
            
             # delete the starting text temp file
