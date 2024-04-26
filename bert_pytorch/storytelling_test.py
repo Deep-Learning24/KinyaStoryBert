@@ -89,7 +89,8 @@ class BERTInference:
                 
             
                 # delete the starting text temp file
-                os.remove(starting_text_temp_file)
+
+                #os.remove(starting_text_temp_file)
         
                 print("Setting model to eval mode...")
                 self.model.eval()
