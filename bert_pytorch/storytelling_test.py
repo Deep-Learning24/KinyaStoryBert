@@ -16,9 +16,11 @@ from rouge import Rouge
 import torch.nn.functional as F
 import math
 import wandb
+import torch.nn as nn
 
 def calculate_nll(predictions, targets):
-    loss = F.nll_loss(predictions, targets)
+    criterion = nn.NLLLoss(ignore_index=0)
+    loss = criterion(predictions, targets)
     return loss.item()
 
 def calculate_perplexity(loss):
@@ -90,11 +92,11 @@ class BERTInference:
                 predictions_masked = predictions[0].squeeze(0).to(self.device)
                 predictions_next = predictions[1].squeeze(0).to(self.device)
 
-                label_loss = calculate_nll(predictions_masked, label)
+                label_loss = calculate_nll(predictions_masked.transpose(1, 2), label)
                 label_perplexity = calculate_perplexity(label_loss)
                 print(f"Label loss: {label_loss}, Label perplexity: {label_perplexity}")
 
-                next_loss = calculate_nll(predictions_next, is_next)
+                next_loss = calculate_nll(predictions_next, is_next.squeeze())
                 next_perplexity = calculate_perplexity(next_loss)
                 print(f"Next loss: {next_loss}, Next perplexity: {next_perplexity}")
 
