@@ -8,8 +8,34 @@ from trainer import KinyaStoryBERTTrainer
 from dataset import KinyaStoryNewDataset
 from transformers import AutoTokenizer
 import os
-from KinyaTokenizer import KinyaTokenizer, encode, decode
+from KinyaTokenizer import  decode
 from tqdm import tqdm
+
+from nltk.translate.bleu_score import sentence_bleu
+from rouge import Rouge
+import torch.nn.functional as F
+import math
+import wandb
+
+def calculate_nll(predictions, targets):
+    loss = F.nll_loss(predictions, targets)
+    return loss.item()
+
+def calculate_perplexity(loss):
+    perplexity = math.exp(loss)
+    return perplexity
+
+def calculate_bleu(reference, candidate):
+    reference = [reference.split()]
+    candidate = candidate.split()
+    score = sentence_bleu(reference, candidate)
+    return score
+
+def calculate_rouge(reference, candidate):
+    rouge = Rouge()
+    scores = rouge.get_scores(candidate, reference)
+    return scores
+
 
 class BERTInference:
     def __init__(self, model, tokenizer, device='cpu'):
@@ -17,6 +43,10 @@ class BERTInference:
         self.tokenizer = tokenizer
         self.device = device
         self.vocab = tokenizer.get_vocab()
+
+    wandb.login(key="3644f3d76a394594794c1b136a20f75303e871ba")
+    wandb.init(project="project-ablations", name="kinya-bert-inference", reinit=True)
+
 
     
     def generate_text(self, starting_text, max_length=128):
@@ -36,6 +66,8 @@ class BERTInference:
             for batch in inference_loader:
                 generated = batch['bert_input']
                 segment_label = batch['segment_label']
+                label = batch['bert_label']
+                is_next = batch['is_next']
                 
                 # Move the generated tensor to the device
                 generated = generated.to(self.device)
@@ -55,6 +87,19 @@ class BERTInference:
                     predictions = self.model.forward(generated, segment_label)
                     predictions_masked = predictions[0].squeeze(0).to(self.device)
                     predictions_next = predictions[1].squeeze(0).to(self.device)
+
+                    label_loss = calculate_nll(predictions_masked, label)
+                    label_perplexity = calculate_perplexity(label_loss)
+                    print(f"Label loss: {label_loss}, Label perplexity: {label_perplexity}")
+
+                    next_loss = calculate_nll(predictions_next, is_next)
+                    next_perplexity = calculate_perplexity(next_loss)
+                    print(f"Next loss: {next_loss}, Next perplexity: {next_perplexity}")
+
+                    total_loss = label_loss + next_loss
+                    total_perplexity = calculate_perplexity(total_loss)
+                    print(f"Total loss: {total_loss}, Total perplexity: {total_perplexity}")
+
                     
                     # Replace the masked tokens in the input with the predicted masked tokens
                     masked_indices = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
@@ -85,6 +130,23 @@ class BERTInference:
                     
                 print("Decoding generated text...")
                 decoded_text = decode(self.tokenizer, generated.squeeze().tolist())
+
+                # Claculate the Rouge and Blue
+                print("Calculating BLEU and ROUGE scores...")
+                bleu_score = calculate_bleu(starting_text, decoded_text)
+                rouge_score = calculate_rouge(starting_text, decoded_text)
+                print(f"BLEU score: {bleu_score}, ROUGE score: {rouge_score}")
+                wandb_logs = {
+                    "Label Loss": label_loss,
+                    "Label Perplexity": label_perplexity,
+                    "Next Loss": next_loss,
+                    "Next Perplexity": next_perplexity,
+                    "Total Loss": total_loss,
+                    "Total Perplexity": total_perplexity,
+                    "BLEU": bleu_score, 
+                    "ROUGE": rouge_score,
+                    }
+                wandb.log(wandb_logs)
                 concatinated_text += decoded_text
                 print(f"Generated text: {decoded_text}")
             return self.generate_text(concatinated_text, max_length)
