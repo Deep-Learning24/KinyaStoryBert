@@ -62,7 +62,7 @@ class BERTInference:
             f.write(starting_text+'\n')
 
         inference_dataset = KinyaStoryNewDataset(corpus_path=starting_text_temp_file, vocab=self.vocab, seq_len=128,is_inference=True)
-        inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=4, shuffle=False)
+        inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=64, shuffle=False)
         data_iter = tqdm(enumerate(inference_loader),
                               desc=" Inferencing",
                               total=len(inference_loader),
