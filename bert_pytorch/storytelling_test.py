@@ -62,16 +62,14 @@ class BERTInference:
             f.write(starting_text+'\n')
 
         inference_dataset = KinyaStoryNewDataset(corpus_path=starting_text_temp_file, vocab=self.vocab, seq_len=128,is_inference=True)
-        inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=64, shuffle=False)
+        inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=1, shuffle=False)
         data_iter = tqdm(enumerate(inference_loader),
                               desc=" Inferencing",
                               total=len(inference_loader),
                               bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
     
         concatinated_text = ""
-        avg_loss = 0.0
-        total_correct = 0
-        total_element = 0
+        
         for i, data in data_iter:
             data = {key: value.to(self.device) for key, value in data.items()}
             generated = data['bert_input']
@@ -125,14 +123,17 @@ class BERTInference:
                 # Append the predicted next word token to the input
                 next_word = torch.argmax(predictions_next[-1, :], dim=-1).unsqueeze(0)
 
+                # Repeat next_word along dimension 0 to match the size of generated
+                next_word = next_word.repeat(generated.shape[0], 1)
+
                 # Early stopping condition
-                if next_word.item() == self.vocab['[PAD]'] or generated.size(1) > max_length:
+                if (next_word == self.vocab['[PAD]']).any() or generated.size(1) > max_length:
                     print(f"Stopping generation at padding token {next_word.item()}")
                     return decode(self.tokenizer, generated.squeeze().tolist())
                     
 
 
-                generated = torch.cat((generated, next_word.unsqueeze(0)), dim=1)
+                generated = torch.cat((generated, next_word), dim=1)
 
                 # If the length of generated exceeds max_length, remove the first token
                 # if generated.size(1) > max_length:
@@ -140,9 +141,10 @@ class BERTInference:
                 
             print("Decoding generated text...")
             decoded_text = decode(self.tokenizer, generated.squeeze().tolist())
-
+            decoded_text = ' '.join(decoded_text)
+            #print("Decoded text: ",decoded_text)
             # Claculate the Rouge and Blue
-            print("Calculating BLEU and ROUGE scores...")
+            #print("Calculating BLEU and ROUGE scores...")
             bleu_score = calculate_bleu(starting_text, decoded_text)
             rouge_score = calculate_rouge(starting_text, decoded_text)
             print(f"BLEU score: {bleu_score}, ROUGE score: {rouge_score}")
