@@ -107,8 +107,8 @@ class BERTInference:
                 total_perplexity = calculate_perplexity(total_loss)
                 print(f"Total loss: {total_loss}, Total perplexity: {total_perplexity}")
                
-                predictions_masked =predictions_masked.squeeze(0).to(self.device)
-                predictions_next = predictions_next.squeeze(0).to(self.device)
+                # predictions_masked =predictions_masked.squeeze(0).to(self.device)
+                # predictions_next = predictions_next.squeeze(0).to(self.device)
                 
                 # Replace the masked tokens in the input with the predicted masked tokens
                 masked_indices = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
@@ -117,7 +117,7 @@ class BERTInference:
                 masked_indices = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
                 
                 for idx in masked_indices:
-                    next_masked = torch.argmax(predictions_masked[idx, :], dim=-1).item()
+                    next_masked = torch.argmax(predictions_masked[idx, :], dim=-1)
                     generated[0, idx] = next_masked
                 
                 
