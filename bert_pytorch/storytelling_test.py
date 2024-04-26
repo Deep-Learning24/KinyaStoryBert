@@ -21,6 +21,9 @@ class BERTInference:
     
     def generate_text(self, starting_text, max_length=128):
         try:
+            if starting_text is None or len(starting_text) == 0:
+                print("Starting text is empty")
+                return None
             # Create a template file and insert the starting text
             starting_text_temp_file = 'kinyastory_data/starting_text_temp.txt'
             with open(starting_text_temp_file, 'w') as f:
@@ -44,6 +47,10 @@ class BERTInference:
                 self.model.eval()
         
                 with torch.no_grad():
+
+                    # Observe the generated text
+
+                    print("The generated text is: ", decode(self.tokenizer, generated.squeeze().tolist()))
                     
                     predictions = self.model.forward(generated, segment_label)
                     predictions_masked = predictions[0].squeeze(0).to(self.device)

@@ -109,7 +109,7 @@ class KinyaTokenizer(object):
                         story_output = df.sample(n=1)['story_output'].values[0]
                         is_next = 0
         
-                    story = story_input + '[SEP]' + story_output
+                    story = story_input + ' ' + story_output
                     # Don't store the story if it empty
                     if story.strip():
                         f.write(story + '\n')
