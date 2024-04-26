@@ -29,7 +29,7 @@ class BERTInference:
             inference_dataset = KinyaStoryNewDataset(corpus_path=starting_text_temp_file, vocab=self.vocab, seq_len=128,is_inference=True)
             inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=4, shuffle=False)
 
-            concatinated_text = starting_text
+            concatinated_text = ""
             for batch in inference_loader:
                 generated = batch['bert_input']
                 segment_label = batch['segment_label']
