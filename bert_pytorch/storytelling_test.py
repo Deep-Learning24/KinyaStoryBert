@@ -79,11 +79,7 @@ class BERTInference:
             label = data['bert_label']
             is_next = data['is_next']
             
-            # Move the generated tensor to the device
-            generated = generated.to(self.device)
-            segment_label = segment_label.to(self.device)
-            label = label.to(self.device)
-            is_next = is_next.to(self.device)
+           
             # delete the starting text temp file
             os.remove(starting_text_temp_file)
     
