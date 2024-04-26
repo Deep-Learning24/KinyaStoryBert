@@ -28,54 +28,56 @@ class BERTInference:
     
             inference_dataset = KinyaStoryNewDataset(corpus_path=starting_text_temp_file, vocab=self.vocab, seq_len=128,is_inference=True)
             inference_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=4, shuffle=False)
-    
+
+            concatinated_text = starting_text
             for batch in inference_loader:
                 generated = batch['bert_input']
                 segment_label = batch['segment_label']
-                break
-            # Move the generated tensor to the device
-            generated = generated.to(self.device)
-            segment_label = segment_label.to(self.device)
-            # delete the starting text temp file
-            os.remove(starting_text_temp_file)
-    
-            print("Setting model to eval mode...")
-            self.model.eval()
-    
-            with torch.no_grad():
                 
-                predictions = self.model.forward(generated, segment_label)
-                predictions_masked = predictions[0].squeeze(0).to(self.device)
-                predictions_next = predictions[1].squeeze(0).to(self.device)
-                
-                # Replace the masked token in the input with the predicted masked token
-                masked_index = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
-                
-                if masked_index.size(0) > 0:
-                    if predictions_masked.dim() > 1:
-                        next_masked = torch.argmax(predictions_masked[masked_index[0], :], dim=-1).unsqueeze(0)
-                    else:
-                        next_masked = torch.argmax(predictions_masked, dim=-1).unsqueeze(0)
-                    generated[0, masked_index[0]] = next_masked
+                # Move the generated tensor to the device
+                generated = generated.to(self.device)
+                segment_label = segment_label.to(self.device)
+                # delete the starting text temp file
+                os.remove(starting_text_temp_file)
+        
+                print("Setting model to eval mode...")
+                self.model.eval()
+        
+                with torch.no_grad():
+                    
+                    predictions = self.model.forward(generated, segment_label)
+                    predictions_masked = predictions[0].squeeze(0).to(self.device)
+                    predictions_next = predictions[1].squeeze(0).to(self.device)
+                    
+                    # Replace the masked token in the input with the predicted masked token
+                    masked_index = (generated == self.vocab["[MASK]"]).nonzero(as_tuple=True)[1]
+                    
+                    if masked_index.size(0) > 0:
+                        if predictions_masked.dim() > 1:
+                            next_masked = torch.argmax(predictions_masked[masked_index[0], :], dim=-1).unsqueeze(0)
+                        else:
+                            next_masked = torch.argmax(predictions_masked, dim=-1).unsqueeze(0)
+                        generated[0, masked_index[0]] = next_masked
 
-                # Append the predicted next word token to the input
-                next_word = torch.argmax(predictions_next[-1, :], dim=-1).unsqueeze(0)
+                    # Append the predicted next word token to the input
+                    next_word = torch.argmax(predictions_next[-1, :], dim=-1).unsqueeze(0)
 
-                # Check if the predicted next word is the padding token
-                if next_word.item() == self.vocab['[PAD]']:
-                    print(f"Stopping generation at padding token {next_word.item()}")
-                    return decode(self.tokenizer, generated.squeeze().tolist())
+                    # Check if the predicted next word is the padding token
+                    if next_word.item() == self.vocab['[PAD]']:
+                        print(f"Stopping generation at padding token {next_word.item()}")
+                        return decode(self.tokenizer, generated.squeeze().tolist())
 
-                generated = torch.cat((generated, next_word.unsqueeze(0)), dim=1)
+                    generated = torch.cat((generated, next_word.unsqueeze(0)), dim=1)
 
-                # If the length of generated exceeds max_length, remove the first token
-                # if generated.size(1) > max_length:
-                #     generated = generated[:, 1:]
-                
-            print("Decoding generated text...")
-            decoded_text = decode(self.tokenizer, generated.squeeze().tolist())
-            print(f"Generated text: {decoded_text}")
-            return self.generate_text(decoded_text, max_length)
+                    # If the length of generated exceeds max_length, remove the first token
+                    # if generated.size(1) > max_length:
+                    #     generated = generated[:, 1:]
+                    
+                print("Decoding generated text...")
+                decoded_text = decode(self.tokenizer, generated.squeeze().tolist())
+                concatinated_text += decoded_text
+                print(f"Generated text: {decoded_text}")
+            return self.generate_text(concatinated_text, max_length)
         except Exception as e:
             print(f"Error generating text: {e}")
         return None
