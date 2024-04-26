@@ -58,6 +58,10 @@ class BERTInference:
                 return None
             # Create a template file and insert the starting text
             starting_text_temp_file = 'kinyastory_data/starting_text_temp.txt'
+            # Create starting_text_temp_file if it does not exist
+            if not os.path.exists(starting_text_temp_file):
+                os.makedirs(os.path.dirname(starting_text_temp_file), exist_ok=True)
+                
             with open(starting_text_temp_file, 'w') as f:
                 f.write(starting_text+'\n')
 
