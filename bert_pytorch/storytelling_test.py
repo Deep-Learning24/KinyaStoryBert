@@ -107,8 +107,10 @@ class BERTInference:
                     label_loss = calculate_nll(predictions_masked.transpose(1, 2), label)
                     label_perplexity = calculate_perplexity(label_loss)
                     print(f"Label loss: {label_loss}, Label perplexity: {label_perplexity}")
+                    print("is_next ",is_next)
+                    print("is_next squeeze",is_next.squeeze())
 
-                    next_loss = calculate_nll(predictions_next, is_next.squeeze()) if is_next is not None or is_next.nelement() != 0 else 0
+                    next_loss = calculate_nll(predictions_next, is_next.squeeze()) if is_next is not None or is_next.nelement() != 0 else float('inf')
                     next_perplexity = calculate_perplexity(next_loss)
                     print(f"Next loss: {next_loss}, Next perplexity: {next_perplexity}")
 
@@ -128,7 +130,8 @@ class BERTInference:
                     for i in range(generated.shape[0]):  # iterate over the sequence dimension
                         for idx in masked_indices:
                             next_masked = torch.argmax(predictions_masked[i, idx, :], dim=-1).item()
-                            generated[i, idx] = next_masked
+                            if next_masked is not  self.vocab['[UNK]']:
+                                generated[i, idx] = next_masked
                     
                     
                     # Append the predicted next word token to the input
