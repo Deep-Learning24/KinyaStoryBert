@@ -302,6 +302,7 @@ class KinyaStoryBERTTrainer:
             # If the layer exists in self.model, load the weights
             if name in model_weights:
                 model_weights[name] = param
+                print(f"Loaded {name} from pretrained model")
     
         # Load the weights into self.model
         self.model.load_state_dict(model_weights)
