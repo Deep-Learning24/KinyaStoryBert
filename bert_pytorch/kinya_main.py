@@ -88,7 +88,7 @@ def train():
                           lr=args.lr, betas=(args.adam_beta1, args.adam_beta2), weight_decay=args.adam_weight_decay,
                           with_cuda=args.with_cuda, cuda_devices=args.cuda_devices, log_freq=args.log_freq, last_saved_epoch=args.last_saved_epoch,wandb_project_name="project-ablations", wandb_name="kinya-bert-finetuning", wandb_reinit=True)
 
-        freeze_or_unfreeze_bert(trainer.model, freeze_until_layer=11, freeze=True)
+        freeze_or_unfreeze_bert(bert, freeze_until_layer=11, freeze=True)
         save_path = "output/bert.model_finetuned"
     #wandb_project_name="project-ablations", wandb_name="kinya-bert-finetuning", wandb_reinit=True
 
@@ -103,7 +103,7 @@ def train():
 
     for epoch in range(args.epochs):
         if args.is_fineturning and epoch == 5:
-                freeze_or_unfreeze_bert(trainer.model, freeze_until_layer=11, freeze=False)
+                freeze_or_unfreeze_bert(bert, freeze_until_layer=11, freeze=False)
         trainer.train(epoch)
 
         if test_data_loader is not None:
