@@ -9,6 +9,18 @@ from dataset import KinyaStoryNewDataset
 from transformers import AutoTokenizer
 import os
 
+def freeze_or_unfreeze_bert(model,freeze_until_layer=11, freeze=False):
+        """
+        Freeze or unfreeze the BERT model layers ).. Gradually unfreeze the layers during training
+        :param freeze_until_layer: Freeze until this layer
+        :param freeze: If True, freeze the layers. If False, unfreeze the layers
+        """
+        layer_num = 0
+        for module in model.transformer_blocks:
+            if layer_num < freeze_until_layer:
+                for param in module.parameters():
+                    param.requires_grad = False if freeze else True
+            layer_num += 1
 def train():
     parser = argparse.ArgumentParser()
 
@@ -36,6 +48,7 @@ def train():
     parser.add_argument("--adam_weight_decay", type=float, default=0.01, help="weight_decay of adam")
     parser.add_argument("--adam_beta1", type=float, default=0.9, help="adam first beta value")
     parser.add_argument("--adam_beta2", type=float, default=0.999, help="adam first beta value")
+    parser.add_argument("--is_fineturning", type=bool, default=False, help="finetuning the model")
 
     args = parser.parse_args()
     tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
@@ -68,15 +81,29 @@ def train():
     trainer = KinyaStoryBERTTrainer(bert, len(vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader,
                           lr=args.lr, betas=(args.adam_beta1, args.adam_beta2), weight_decay=args.adam_weight_decay,
                           with_cuda=args.with_cuda, cuda_devices=args.cuda_devices, log_freq=args.log_freq, last_saved_epoch=args.last_saved_epoch)
+    
+    save_path = args.output_path
+    if args.is_fineturning:
+        trainer = KinyaStoryBERTTrainer(bert, len(vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader,
+                          lr=args.lr, betas=(args.adam_beta1, args.adam_beta2), weight_decay=args.adam_weight_decay,
+                          with_cuda=args.with_cuda, cuda_devices=args.cuda_devices, log_freq=args.log_freq, last_saved_epoch=args.last_saved_epoch,wandb_project_name="project-ablations", wandb_name="kinya-bert-finetuning", wandb_reinit=True)
+
+        freeze_or_unfreeze_bert(trainer.model, freeze_until_layer=11, freeze=True)
+        save_path = "output/bert.model_finetuned"
+    #wandb_project_name="project-ablations", wandb_name="kinya-bert-finetuning", wandb_reinit=True
 
     print("Training Start")
     #Create output directory if it doesn't exist
     
-    if not os.path.exists(args.output_path):
-        os.makedirs(args.output_path)
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
     best_loss = float('inf')
-    
+
+   
+
     for epoch in range(args.epochs):
+        if args.is_fineturning and epoch == 5:
+                freeze_or_unfreeze_bert(trainer.model, freeze_until_layer=11, freeze=False)
         trainer.train(epoch)
 
         if test_data_loader is not None:
@@ -86,7 +113,7 @@ def train():
         
             # If the current loss is lower than the best loss, save the model and update the best loss
             if current_loss < best_loss:
-                trainer.save(epoch, args.output_path)
+                trainer.save(epoch, save_path)
                 best_loss = current_loss
 
 if __name__ == "__main__":

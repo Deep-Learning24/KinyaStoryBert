@@ -83,9 +83,9 @@ class BERTInference:
                 label = data['bert_label']
                 is_next = data['is_next']
 
-                # Skip this iteration if is_next is empty
-                if is_next.nelement() == 0:
-                    continue
+                # # Skip this iteration if is_next is empty
+                # if is_next.nelement() == 0:
+                #     continue
                 
             
                 # delete the starting text temp file
@@ -108,7 +108,7 @@ class BERTInference:
                     label_perplexity = calculate_perplexity(label_loss)
                     print(f"Label loss: {label_loss}, Label perplexity: {label_perplexity}")
 
-                    next_loss = calculate_nll(predictions_next, is_next.squeeze())
+                    next_loss = calculate_nll(predictions_next, is_next.squeeze()) if is_next is not None or is_next.nelement() != 0 else 0
                     next_perplexity = calculate_perplexity(next_loss)
                     print(f"Next loss: {next_loss}, Next perplexity: {next_perplexity}")
 

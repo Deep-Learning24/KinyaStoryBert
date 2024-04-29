@@ -50,9 +50,6 @@ class KinyaStoryFinetune:
             if test_data_loader is not None:
                 # Get the average loss for the current epoch
                 current_loss = trainer.get_average_loss()
-                # Clear the cuda cache
-                torch.cuda.empty_cache()
-                gc.collect()
                 
                 trainer.test(epoch=epoch)
                 # If the current loss is lower than the best loss, save the model and update the best loss
