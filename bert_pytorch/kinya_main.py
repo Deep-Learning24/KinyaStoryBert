@@ -6,9 +6,9 @@ sys.path.append('../')
 from model import BERT
 from trainer import KinyaStoryBERTTrainer
 from dataset import KinyaStoryNewDataset
-# from transformers import AutoTokenizer
+from transformers import AutoTokenizer
 
-from dataset.custom_tokenizer import special_tokens, encode_text,load_bpe_model
+from dataset.custom_tokenizer import special_tokens, load_vocabulary, encode_text
 import os
 
 def freeze_or_unfreeze_bert(model,freeze_until_layer=11, freeze=False):
@@ -53,11 +53,9 @@ def train():
     parser.add_argument("--is_fineturning", type=bool, default=False, help="finetuning the model")
 
     args = parser.parse_args()
-    #tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
+    tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
 
-
-    #vocab = tokenizer.get_vocab()
-    vocab = load_bpe_model()
+    vocab = tokenizer.get_vocab()
 
     print("Vocab Size: ", len(vocab))
 

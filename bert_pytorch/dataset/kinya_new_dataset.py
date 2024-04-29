@@ -4,9 +4,9 @@ from torch.utils.data import Dataset
 import tqdm
 import torch
 import random
-# from transformers import AutoTokenizer
+from transformers import AutoTokenizer
 import nltk
-from .custom_tokenizer import  encode_text
+
 
 from nltk.corpus import words
 
@@ -51,7 +51,7 @@ class KinyaStoryNewDataset(Dataset):
         self.corpus_lines = corpus_lines
         self.corpus_path = corpus_path
         self.encoding = encoding
-        #self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
+        self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
 
         self.common_english_words = set(words.words())
         
@@ -116,51 +116,36 @@ class KinyaStoryNewDataset(Dataset):
                   "segment_label": segment_label,
                   "is_next": is_next_label}
 
-        # Ensure that the indices used for selecting from tensors are within the valid range
-        for key, value in output.items():
-            output[key] = torch.tensor(value)[:self.seq_len]
+        return {key: torch.tensor(value) for key, value in output.items()}
 
-        return output
-    
     def random_word(self, sentence):
-        try:
-            tokens = encode_text(sentence, self.vocab)
-            output_label = []
-    
-            for i, token in enumerate(tokens):
-                prob = random.random()
-                if prob < 0.15:
-                    prob /= 0.15
-    
-                    # 80% randomly change token to mask token
-                    if prob < 0.8:
-                        tokens[i] = self.vocab.PieceToId("[MASK]")
-    
-                    # 10% randomly change token to random token
-                    elif prob < 0.9:
-                        random_token = self.vocab.IdToPiece(random.randrange(len(self.vocab)))
-                        try: 
-                            tokens[i]=self.vocab.PieceToId(random_token)
-                        except:
-                            tokens[i]=self.vocab.PieceToId("[UNK]")
-    
-                    # 10% randomly change token to current token
-                    else:
-                        tokens[i] = token
-    
-                    output_label.append(token)
-    
-                else:
-                    tokens[i] = token
-                    output_label.append(0)
-    
-            return tokens, output_label
-    
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            return None, None
+        tokens = self.tokenizer.tokenize(sentence)
+        output_label = []
 
-        
+        for i, token in enumerate(tokens):
+            prob = random.random()
+            if prob < 0.15:
+                prob /= 0.15
+
+                # 80% randomly change token to mask token
+                if prob < 0.8:
+                    tokens[i] = self.vocab["[MASK]"]
+
+                # 10% randomly change token to random token
+                elif prob < 0.9:
+                    tokens[i] = random.randrange(len(self.vocab))
+
+                # 10% randomly change token to current token
+                else:
+                    tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
+
+                output_label.append(self.vocab.get(token, self.vocab["[UNK]"]))
+
+            else:
+                tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
+                output_label.append(0)
+
+        return tokens, output_label
 
     def random_sent(self, index):
         t1, t2 = self.get_corpus_line(index)
