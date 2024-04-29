@@ -4,6 +4,8 @@ import re
 import sys
 sys.path.append("../")
 
+# Define special tokens
+special_tokens = ["[PAD]", "[CLS]", "[MASK]", "[SEP]", "[UNK]"]
 
 def read_datasets(directory):
     datasets = []
@@ -22,7 +24,7 @@ def tokenize(text):
     tokens = re.findall(pattern, text)
     return tokens
 
-def create_vocabulary(datasets, special_tokens):
+def create_vocabulary(datasets):
     all_tokens = []
     for dataset in datasets:
         tokens = tokenize(dataset)
@@ -60,12 +62,14 @@ def encode_text(text, vocabulary):
             encoded_text.append(vocabulary["[UNK]"])  # Handle unknown tokens
     return encoded_text
 
-def decode_indices(indices, vocabulary):
+def decode_indices(indices, vocabulary,skip_special_tokens=True):
     decoded_text = []
     for index in indices:
         if index in vocabulary.values():
             # Find the token corresponding to the index in the vocabulary
             token = next(key for key, value in vocabulary.items() if value == index)
+            if skip_special_tokens and token in special_tokens:
+                continue
             decoded_text.append(token)
         else:
             decoded_text.append("[UNK]")  # Handle unknown indices
@@ -73,15 +77,13 @@ def decode_indices(indices, vocabulary):
 
 if __name__ == "__main__":
 
-    # Define special tokens
-    special_tokens = ["[PAD]", "[CLS]", "[MASK]", "[SEP]", "[UNK]"]
 
     # Read datasets
     datasets_directory = "kinyastory_data"
     datasets = read_datasets(datasets_directory)
 
     # Create vocabulary
-    vocabulary = create_vocabulary(datasets, special_tokens)
+    vocabulary = create_vocabulary(datasets)
 
     # Save vocabulary
     vocabulary_filename = "dataset/vocabulary.pkl"
