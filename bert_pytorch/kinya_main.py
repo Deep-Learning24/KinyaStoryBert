@@ -8,7 +8,7 @@ from trainer import KinyaStoryBERTTrainer
 from dataset import KinyaStoryNewDataset
 # from transformers import AutoTokenizer
 
-from dataset.custom_tokenizer import special_tokens, load_vocabulary, encode_text
+from dataset.custom_tokenizer import special_tokens, encode_text,load_bpe_model
 import os
 
 def freeze_or_unfreeze_bert(model,freeze_until_layer=11, freeze=False):
@@ -57,7 +57,7 @@ def train():
 
 
     #vocab = tokenizer.get_vocab()
-    vocab = load_vocabulary("dataset/vocabulary.pkl")
+    vocab = load_bpe_model()
 
     print("Vocab Size: ", len(vocab))
 

@@ -1,8 +1,5 @@
 import os
-import pickle
-import re
-import sys
-sys.path.append("../")
+import sentencepiece as spm
 
 # Define special tokens
 special_tokens = ["[PAD]", "[CLS]", "[MASK]", "[SEP]", "[UNK]"]
@@ -15,84 +12,53 @@ def read_datasets(directory):
                 datasets.append(file.read())
     return datasets
 
-def tokenize(text):
-    # Construct the regular expression pattern dynamically
-    special_tokens_pattern = "|".join(re.escape(token) for token in special_tokens)
-    pattern = r"\b\w+(?:'\w+)?\b|" + special_tokens_pattern + r"|[\.,!?;:]"
-    
-    # Tokenize using the constructed pattern
-    tokens = re.findall(pattern, text)
-    return tokens
 
-def create_vocabulary(datasets):
-    all_tokens = []
-    for dataset in datasets:
-        tokens = tokenize(dataset)
-        all_tokens.extend(tokens)
-    vocabulary = {}
-    index = 0
-    for special_token in special_tokens:
-        vocabulary[special_token] = index
-        index += 1
-    for token in all_tokens:
-        if token not in vocabulary:
-            vocabulary[token] = index
-            index += 1
-    return vocabulary
+def train_bpe_model(datasets, model_prefix="bpe", vocab_size= 27779):
+    # Delete existing model files
+    if os.path.exists(f"{model_prefix}.model"):
+        os.remove(f"{model_prefix}.model")
+    if os.path.exists(f"{model_prefix}.vocab"):
+        os.remove(f"{model_prefix}.vocab")
 
-def save_vocabulary(vocabulary, filename):
-    with open(filename, "wb") as file:
-        pickle.dump(vocabulary, file)
+    # Join all datasets into a single string
+    all_text = " ".join(datasets)
 
-def load_vocabulary(filename):
-    with open(filename, "rb") as file:
-        vocabulary = pickle.load(file)
-    return vocabulary
-    
-def encode_text(text, vocabulary):
-    # Tokenize the text
-    tokens = tokenize(text)
+    # Write all_text to a temporary file
+    with open("temp.txt", "w", encoding="ISO-8859-1") as file:
+        file.write(all_text)
 
-    # Encode tokens using the vocabulary
-    encoded_text = []
-    for token in tokens:
-        if token in vocabulary:
-            encoded_text.append(vocabulary[token])
-        else:
-            encoded_text.append(vocabulary["[UNK]"])  # Handle unknown tokens
-    return encoded_text
+    # Define user-defined symbols
+    user_defined_symbols = list(set(special_tokens + list(".,!?';:")))
 
-def decode_indices(indices, vocabulary,skip_special_tokens=True):
-    decoded_text = []
-    for index in indices:
-        if index in vocabulary.values():
-            # Find the token corresponding to the index in the vocabulary
-            token = next(key for key, value in vocabulary.items() if value == index)
-            if skip_special_tokens and token in special_tokens:
-                continue
-            decoded_text.append(token)
-        else:
-            decoded_text.append("[UNK]")  # Handle unknown indices
-    return decoded_text
+    # Train a BPE model on the text
+    spm.SentencePieceTrainer.train(input="temp.txt", model_prefix=model_prefix, vocab_size=vocab_size, user_defined_symbols=user_defined_symbols)
+def load_bpe_model(model_prefix="bpe"):
+    # Load the trained model
+    sp = spm.SentencePieceProcessor()
+    sp.load(f"{model_prefix}.model")
+    return sp
+
+def encode_text(text, sp):
+    return sp.encode_as_ids(text)
+
+def decode_indices(indices, sp):
+    return sp.decode_ids(indices)
 
 if __name__ == "__main__":
-
-
     # Read datasets
     datasets_directory = "kinyastory_data"
     datasets = read_datasets(datasets_directory)
 
-    # Create vocabulary
-    vocabulary = create_vocabulary(datasets)
+    # Train BPE model
+    train_bpe_model(datasets)
 
-    # Save vocabulary
-    vocabulary_filename = "dataset/vocabulary.pkl"
-    save_vocabulary(vocabulary, vocabulary_filename)
+    # Load BPE model
+    sp = load_bpe_model()
 
     # Example usage of encoder and decoder functions
     text = "Ndi intwali yabyirukiye gutsinda, nsinganirwa nshaka kurwana n'abandi bantu."
-    encoded_text = encode_text(text, vocabulary)
-    decoded_text = decode_indices(encoded_text, vocabulary)
+    encoded_text = encode_text(text, sp)
+    decoded_text = decode_indices(encoded_text, sp)
 
     print("Encoded text:", encoded_text)
     print("Decoded text:", decoded_text)

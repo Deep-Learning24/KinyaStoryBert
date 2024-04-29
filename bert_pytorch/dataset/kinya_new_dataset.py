@@ -6,7 +6,7 @@ import torch
 import random
 # from transformers import AutoTokenizer
 import nltk
-from .custom_tokenizer import special_tokens, load_vocabulary, encode_text
+from .custom_tokenizer import  encode_text
 
 from nltk.corpus import words
 
