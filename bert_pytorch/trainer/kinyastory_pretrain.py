@@ -290,12 +290,22 @@ class KinyaStoryBERTTrainer:
         return self.model
     
     def load_transformer_pretrained(self):
-
         pretrained_model = AutoModelForMaskedLM.from_pretrained("jean-paul/KinyaBERT-large")
         # Get the weights of the pretrained model
         pretrained_weights = pretrained_model.state_dict()
-        # Get the weights of the model
-        self.model.load_state_dict(pretrained_weights)
+    
+        # Create a new state dictionary for self.model
+        model_weights = self.model.state_dict()
+    
+        # Iterate over the weights of the pretrained model
+        for name, param in pretrained_weights.items():
+            # If the layer exists in self.model, load the weights
+            if name in model_weights:
+                model_weights[name] = param
+    
+        # Load the weights into self.model
+        self.model.load_state_dict(model_weights)
+    
         self.model.to(self.device)
         print("Model loaded from pretrained model")
         return self.model
