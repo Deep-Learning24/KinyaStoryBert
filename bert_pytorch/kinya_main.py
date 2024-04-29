@@ -57,7 +57,7 @@ def train():
 
 
     #vocab = tokenizer.get_vocab()
-    vocab = load_vocabulary("dataset/vocab.pkl")
+    vocab = load_vocabulary("dataset/vocabulary.pkl")
 
     print("Vocab Size: ", len(vocab))
 
