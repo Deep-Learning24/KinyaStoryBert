@@ -8,7 +8,6 @@ from trainer import KinyaStoryBERTTrainer
 from dataset import KinyaStoryNewDataset
 from transformers import AutoTokenizer
 
-from dataset.custom_tokenizer import special_tokens, load_vocabulary, encode_text
 import os
 
 def freeze_or_unfreeze_bert(model,freeze_until_layer=11, freeze=False):
