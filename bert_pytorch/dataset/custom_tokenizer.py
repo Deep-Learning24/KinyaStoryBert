@@ -1,5 +1,6 @@
 import os
 import sentencepiece as spm
+from vocab import WordVocab
 
 # Define special tokens
 special_tokens = ["[PAD]", "[CLS]", "[MASK]", "[SEP]", "[UNK]"]
@@ -39,7 +40,8 @@ def load_bpe_model(model_prefix="bpe"):
     return sp
 
 def encode_text(text, sp):
-    return sp.encode_as_ids(text)
+    encoded_text = sp.encode_as_ids(text)
+    return encoded_text
 
 def decode_indices(indices, sp):
     return sp.decode_ids(indices)

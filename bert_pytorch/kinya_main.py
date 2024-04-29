@@ -53,7 +53,7 @@ def train():
 
     args = parser.parse_args()
     tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
-
+    
     vocab = tokenizer.get_vocab()
 
     print("Vocab Size: ", len(vocab))
@@ -82,7 +82,7 @@ def train():
     trainer = KinyaStoryBERTTrainer(bert, len(vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader,
                           lr=args.lr, betas=(args.adam_beta1, args.adam_beta2), weight_decay=args.adam_weight_decay,
                           with_cuda=args.with_cuda, cuda_devices=args.cuda_devices, log_freq=args.log_freq, last_saved_epoch=args.last_saved_epoch)
-    
+    trainer.load_model()
     save_path = args.output_path
     if args.is_fineturning:
         trainer = KinyaStoryBERTTrainer(bert, len(vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader,

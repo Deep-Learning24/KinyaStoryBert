@@ -12,7 +12,8 @@ from model import BERTLM, BERT
 import tqdm
 import logging
 import wandb
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer,AutoModelForMaskedLM
+
 from KinyaTokenizer import encode, decode
 class KinyaStoryBERTTrainer:
     """
@@ -97,6 +98,7 @@ class KinyaStoryBERTTrainer:
             "model": "BERT",
             "model Parameters": sum([p.nelement() for p in self.model.parameters()])
         }
+        self.load_transformer_pretrained()
         self.load_model()
 
         self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
@@ -287,6 +289,16 @@ class KinyaStoryBERTTrainer:
         
         return self.model
     
+    def load_transformer_pretrained(self):
+
+        pretrained_model = AutoModelForMaskedLM.from_pretrained("jean-paul/KinyaBERT-large")
+        # Get the weights of the pretrained model
+        pretrained_weights = pretrained_model.state_dict()
+        # Get the weights of the model
+        self.model.load_state_dict(pretrained_weights)
+        self.model.to(self.device)
+        print("Model loaded from pretrained model")
+        return self.model
     
     def load_model_from_path(epoch,vocab_size,bert,device="cpu",warmup_steps=10000,lr: float = 1e-4, betas=(0.9, 0.999), weight_decay: float = 0.01,is_inference=False):
         # This BERT model will be saved every epoch
