@@ -135,13 +135,16 @@ class KinyaStoryNewDataset(Dataset):
                     # 10% randomly change token to random token
                     elif prob < 0.9:
                         random_token = self.vocab.IdToPiece(random.randrange(len(self.vocab)))
-                        tokens[i] = self.vocab.PieceToId(random_token) if self.vocab.PieceToId(random_token) != 0 else self.vocab.PieceToId("[UNK]")
+                        try: 
+                            tokens[i]=self.vocab.PieceToId(random_token)
+                        except:
+                            tokens[i]=self.vocab.PieceToId("[UNK]")
     
                     # 10% randomly change token to current token
                     else:
                         tokens[i] = token
     
-                    output_label.append(token if token != 0 else self.vocab.PieceToId("[UNK]"))
+                    output_label.append(token)
     
                 else:
                     tokens[i] = token
