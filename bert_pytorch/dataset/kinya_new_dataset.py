@@ -119,7 +119,6 @@ class KinyaStoryNewDataset(Dataset):
         return {key: torch.tensor(value) for key, value in output.items()}
 
     def random_word(self, sentence):
-        #tokens = self.tokenizer.tokenize(sentence)
         tokens = encode_text(sentence, self.vocab)
         output_label = []
 
@@ -130,7 +129,7 @@ class KinyaStoryNewDataset(Dataset):
 
                 # 80% randomly change token to mask token
                 if prob < 0.8:
-                    tokens[i] = self.vocab["[MASK]"]
+                    tokens[i] = self.vocab.PieceToId("[MASK]")
 
                 # 10% randomly change token to random token
                 elif prob < 0.9:
@@ -138,12 +137,12 @@ class KinyaStoryNewDataset(Dataset):
 
                 # 10% randomly change token to current token
                 else:
-                    tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
+                    tokens[i] = self.vocab.PieceToId(token)
 
-                output_label.append(self.vocab.get(token, self.vocab["[UNK]"]))
+                output_label.append(self.vocab.PieceToId(token))
 
             else:
-                tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
+                tokens[i] = self.vocab.PieceToId(token)
                 output_label.append(0)
 
         return tokens, output_label
