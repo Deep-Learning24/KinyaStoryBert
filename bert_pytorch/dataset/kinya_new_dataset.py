@@ -123,6 +123,9 @@ class KinyaStoryNewDataset(Dataset):
         output_label = []
 
         for i, token in enumerate(tokens):
+            # Convert token to string
+            token = str(token)
+
             prob = random.random()
             if prob < 0.15:
                 prob /= 0.15
