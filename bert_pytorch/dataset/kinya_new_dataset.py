@@ -122,36 +122,33 @@ class KinyaStoryNewDataset(Dataset):
         try:
             tokens = encode_text(sentence, self.vocab)
             output_label = []
-
+    
             for i, token in enumerate(tokens):
-                # Convert token to string
-                token_str = self.vocab.IdToPiece(token)
-
                 prob = random.random()
                 if prob < 0.15:
                     prob /= 0.15
-
+    
                     # 80% randomly change token to mask token
                     if prob < 0.8:
                         tokens[i] = self.vocab.PieceToId("[MASK]")
-
+    
                     # 10% randomly change token to random token
                     elif prob < 0.9:
                         random_token = self.vocab.IdToPiece(random.randrange(len(self.vocab)))
                         tokens[i] = self.vocab.PieceToId(random_token) if self.vocab.PieceToId(random_token) != 0 else self.vocab.PieceToId("[UNK]")
-
+    
                     # 10% randomly change token to current token
                     else:
                         tokens[i] = token
-
-                    output_label.append(token if self.vocab.PieceToId(token_str) != 0 else self.vocab.PieceToId("[UNK]"))
-
+    
+                    output_label.append(token if token != 0 else self.vocab.PieceToId("[UNK]"))
+    
                 else:
                     tokens[i] = token
                     output_label.append(0)
-
+    
             return tokens, output_label
-
+    
         except Exception as e:
             print(f"An error occurred: {e}")
             return None, None
