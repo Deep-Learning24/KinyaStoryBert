@@ -23,7 +23,7 @@ def encode(tokenizer, text):
     return encoding['input_ids'], encoding['attention_mask']
 
 
-def decode(tokenizer, encoded_tokens, skip_special_tokens=True):
+def decode(tokenizer, encoded_tokens, skip_special_tokens=False):
 
     if isinstance(encoded_tokens[0], list):
 
