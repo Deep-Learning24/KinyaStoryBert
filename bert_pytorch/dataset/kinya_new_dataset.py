@@ -116,8 +116,12 @@ class KinyaStoryNewDataset(Dataset):
                   "segment_label": segment_label,
                   "is_next": is_next_label}
 
-        return {key: torch.tensor(value) for key, value in output.items()}
+        # Ensure that the indices used for selecting from tensors are within the valid range
+        for key, value in output.items():
+            output[key] = torch.tensor(value)[:self.seq_len]
 
+        return output
+    
     def random_word(self, sentence):
         try:
             tokens = encode_text(sentence, self.vocab)
