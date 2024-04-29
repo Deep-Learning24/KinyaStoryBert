@@ -4,9 +4,9 @@ from torch.utils.data import Dataset
 import tqdm
 import torch
 import random
-from transformers import AutoTokenizer
+# from transformers import AutoTokenizer
 import nltk
-
+from custom_tokenizer import special_tokens, load_vocabulary, encode_text
 
 from nltk.corpus import words
 
@@ -51,7 +51,7 @@ class KinyaStoryNewDataset(Dataset):
         self.corpus_lines = corpus_lines
         self.corpus_path = corpus_path
         self.encoding = encoding
-        self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
+        #self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
 
         self.common_english_words = set(words.words())
         
@@ -119,7 +119,8 @@ class KinyaStoryNewDataset(Dataset):
         return {key: torch.tensor(value) for key, value in output.items()}
 
     def random_word(self, sentence):
-        tokens = self.tokenizer.tokenize(sentence)
+        #tokens = self.tokenizer.tokenize(sentence)
+        tokens = encode_text(sentence, self.vocab)
         output_label = []
 
         for i, token in enumerate(tokens):
