@@ -17,6 +17,7 @@ import torch.nn.functional as F
 import math
 import wandb
 import torch.nn as nn
+from nltk.translate.bleu_score import SmoothingFunction
 
 def calculate_nll(predictions, targets):
     criterion = nn.NLLLoss(ignore_index=0)
@@ -27,14 +28,17 @@ def calculate_perplexity(loss):
     perplexity = math.exp(loss)
     return perplexity
 
+
 def calculate_bleu(reference, candidate):
     reference = [reference.split()]
     candidate = candidate.split()
-    score = sentence_bleu(reference, candidate)
+    smoothie = SmoothingFunction().method4
+    score = sentence_bleu(reference, candidate, smoothing_function=smoothie)
     return score
 
 def calculate_rouge(reference, candidate):
     rouge = Rouge()
+    
     scores = rouge.get_scores(candidate, reference)
     return scores
 
@@ -99,7 +103,7 @@ class BERTInference:
 
                     # Observe the generated text
 
-                    #print("The generated text is: ", decode(self.tokenizer, generated.squeeze().tolist()))
+                    print("The Sent text is: ", decode(self.tokenizer, generated.squeeze().tolist()))
                     
                     predictions_next, predictions_masked = self.model.forward(generated, segment_label)
                 
