@@ -18,6 +18,16 @@ from transformers import AutoTokenizer, AutoModelForMaskedLM
 
 import torch.nn as nn
 
+def collate_fn(batch):
+    # Collate the input tensors
+    input_ids = torch.stack([item['input_ids'] for item in batch])
+    attention_mask = torch.stack([item['attention_mask'] for item in batch])
+    
+    # Collate the labels
+    labels = torch.stack([item['labels'] for item in batch])
+    
+    return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--epochs", type=int, default=10, help="number of epochs")
@@ -47,8 +57,8 @@ def main():
 
 
     # Create a DataLoader for your training and validation data
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size,collate_fn=collate_fn)
 
     # Define your optimizer and loss function
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -63,11 +73,8 @@ def main():
         val_loss = 0
         for batch in train_loader:
             # Forward pass
-            #print(batch)
-            inputs,lables = batch
-            outputs= model(**inputs)
-            #print(outputs)
-            loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), lables.view(-1))
+            outputs = model(**batch)
+            loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), batch["labels"].view(-1))
             train_loss += loss.item()
             # Backward pass and optimization
             loss.backward()
@@ -80,11 +87,8 @@ def main():
         model.eval()
         with torch.no_grad():
             for batch in val_loader:
-                inputs,lables = batch
-                outputs = model(**inputs)
-                val_loss =  loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), lables.view(-1))
-                # Compute validation metrics here
-                # print(f"Validation loss: {val_loss}")
+                outputs = model(**batch)
+                val_loss =  loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), batch["labels"].view(-1))
                 val_loss += val_loss.item()
         print(f"Validation loss: {val_loss}")
         total_val_loss += val_loss

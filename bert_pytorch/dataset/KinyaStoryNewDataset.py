@@ -91,4 +91,7 @@ class KinyaStoryNewDataset(Dataset):
         # Set the last token of the inner list to the pad_token_id
         labels[:, -1] = -100
 
-        return inputs, labels
+        return_data = {key: tensor.squeeze(0) for key, tensor in inputs.items()}
+        return_data["labels"] = labels.squeeze(0)
+
+        return return_data
