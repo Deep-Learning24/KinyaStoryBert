@@ -189,12 +189,12 @@ def main():
         print(f"Total training perplexity: {total_train_perplexity}")
         print(f"Total validation perplexity: {total_val_perplexity}")
         print(f"Total BLEU score: {total_bleu}")
-        #print(f"Total ROUGE score: {total_rouge}")
-        wandb.log({"total training loss": total_train_loss, "total validation loss": total_val_loss, "total training perplexity": total_train_perplexity, "total validation perplexity": total_val_perplexity, "total bleu score": total_bleu})
-        # Log the average training and validation loss for the epoch
-        average= {"average training loss": total_train_loss / (epoch + 1), "average validation loss": total_val_loss / (epoch + 1), "average training perplexity": total_train_perplexity / (epoch + 1), "average validation perplexity": total_val_perplexity / (epoch + 1), "average bleu score": total_bleu / (epoch + 1)}
-        print(average)
-        wandb.log(average)
+    #print(f"Total ROUGE score: {total_rouge}")
+    wandb.log({"total training loss": total_train_loss, "total validation loss": total_val_loss, "total training perplexity": total_train_perplexity, "total validation perplexity": total_val_perplexity, "total bleu score": total_bleu})
+    # Log the average training and validation loss for the epoch
+    average= {"average training loss": total_train_loss / (epoch + 1), "average validation loss": total_val_loss / (epoch + 1), "average training perplexity": total_train_perplexity / (epoch + 1), "average validation perplexity": total_val_perplexity / (epoch + 1), "average bleu score": total_bleu / (epoch + 1)}
+    print(average)
+    wandb.log(average)
 
     wandb.finish()
 
