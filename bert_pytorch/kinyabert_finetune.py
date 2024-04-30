@@ -56,7 +56,7 @@ def calculate_rouge(reference, candidate):
     return scores
 def load_model(model, model_path,device='cpu'):
     if os.path.exists(model_path):
-        model.load_state_dict(torch.load(model_path), map_location=torch.device(device))
+        model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
         model.to(device)
         print(f"Model loaded from {model_path}")
         return model
