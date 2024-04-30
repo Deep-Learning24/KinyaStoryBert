@@ -65,9 +65,9 @@ def load_model(model, model_path,device='cpu'):
         model.to(device)
         return model
 
-def generate_text(model, tokenizer, input_text, max_len=128):
+def generate_text(model, tokenizer, input_text, max_len=128,device='cpu'):
     encoded_input = tokenizer(input_text, return_tensors='pt',truncation=True, padding='max_length', max_length=max_len)
-    
+    encoded_input = {key: tensor.to(device) for key, tensor in encoded_input.items()}
     output = model(**encoded_input)
     logits = output.logits
     predicted_index = torch.argmax(logits, dim=-1)
