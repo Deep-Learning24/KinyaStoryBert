@@ -1,73 +1,78 @@
+import argparse
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 import torch
 import torch.nn as nn
+from bert_pytorch.kinyabert_finetune import load_model,generate_text
 
 tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large")
 
-model = AutoModelForMaskedLM.from_pretrained("jean-paul/KinyaBERT-large")
+# model = AutoModelForMaskedLM.from_pretrained("jean-paul/KinyaBERT-large")
 
-input_text = "Ejo ndikwiga nagize abashyitsi baje kunsura. Ndashaka kubona niba bazakwiga cyangwa se bazasura. [MASK] ni umwihariko w'abashyitsi."
-encoded_input = tokenizer(input_text, return_tensors='pt',truncation=True, padding='max_length', max_length=128)
+# # Load the model
+# # model = load_model(model,)
 
-# Create the labels by shifting the input_ids to the right
-labels = encoded_input["input_ids"].clone()
+# input_text = "Ejo ndikwiga nagize abashyitsi baje kunsura. Ndashaka kubona niba bazakwiga cyangwa se bazasura. [MASK] ni umwihariko w'abashyitsi."
+# encoded_input = tokenizer(input_text, return_tensors='pt',truncation=True, padding='max_length', max_length=128)
 
-# Shift the inner list to the right
-labels[0, :-1] = encoded_input["input_ids"][0, 1:]
+# # Create the labels by shifting the input_ids to the right
+# labels = encoded_input["input_ids"].clone()
 
-
-# Set the first token of the inner list to -100
-labels[0, -1] = tokenizer.pad_token_id
-
-
-# Set the last token of the inner list to the pad_token_id
-labels[:, -1] = -100
+# # Shift the inner list to the right
+# labels[0, :-1] = encoded_input["input_ids"][0, 1:]
 
 
-# Squeeze the tensors and return them
-inputs = {key: tensor.squeeze(0) for key, tensor in encoded_input.items()}
-inputs["labels"] = labels.squeeze(0)
-
-# # Print the input dictionary
-# print("Input dictionary:")
-# print(inputs)
-print(encoded_input.keys())
-
-print(encoded_input)
-output = model(**encoded_input)
-print("Keys:", output.keys())
-print("Output shape:", output.logits.shape)
-print(output)
+# # Set the first token of the inner list to -100
+# labels[0, -1] = tokenizer.pad_token_id
 
 
+# # Set the last token of the inner list to the pad_token_id
+# labels[:, -1] = -100
 
-# Get the logits from the model's output
-logits = output.logits
-loss = output.loss
-print("Loss:", loss)
+
+# # Squeeze the tensors and return them
+# inputs = {key: tensor.squeeze(0) for key, tensor in encoded_input.items()}
+# inputs["labels"] = labels.squeeze(0)
+
+# # # Print the input dictionary
+# # print("Input dictionary:")
+# # print(inputs)
+# print(encoded_input.keys())
+
+# print(encoded_input)
+# output = model(**encoded_input)
+# print("Keys:", output.keys())
+# print("Output shape:", output.logits.shape)
+# print(output)
 
 
 
-# Convert the labels to tensor
-labels = torch.tensor(labels)
+# # Get the logits from the model's output
+# logits = output.logits
+# loss = output.loss
+# print("Loss:", loss)
 
-# Initialize the loss function
-loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
 
-# Compute the loss
-loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
 
-print("Loss:", loss.item())
-# # Get the token IDs of the most probable tokens
-predicted_token_ids = torch.argmax(logits, dim=-1)
+# # Convert the labels to tensor
+# labels = torch.tensor(labels)
 
-# # Convert the token IDs back into strings
-predicted_tokens = tokenizer.convert_ids_to_tokens(predicted_token_ids[0])
-print("Predicted tokens:", predicted_tokens)
+# # Initialize the loss function
+# loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
 
-# Join the tokens into a single string
-predicted_text = ' '.join(predicted_tokens)
-print("Predicted text:", predicted_text)
+# # Compute the loss
+# loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
+
+# print("Loss:", loss.item())
+# # # Get the token IDs of the most probable tokens
+# predicted_token_ids = torch.argmax(logits, dim=-1)
+
+# # # Convert the token IDs back into strings
+# predicted_tokens = tokenizer.convert_ids_to_tokens(predicted_token_ids[0])
+# print("Predicted tokens:", predicted_tokens)
+
+# # Join the tokens into a single string
+# predicted_text = ' '.join(predicted_tokens)
+# print("Predicted text:", predicted_text)
 
 # # Replace the masked tokens in the input text with the predicted tokens
 # for i, token in enumerate(predicted_tokens):
@@ -76,3 +81,36 @@ print("Predicted text:", predicted_text)
 
 # print("Generated text:", input_text)
 
+class KinyaBertInference:
+
+    def __init__(self, model_path,lasy_saved_epoch, device):
+        self.model = AutoModelForMaskedLM.from_pretrained("jean-paul/KinyaBERT-large")
+        self.model = load_model(self.model, f"{model_path}_epoch_{lasy_saved_epoch}.pth", device)
+        self.model.eval()
+    def generate_text(self, input_text):
+        return generate_text(self.model, input_text)
+        
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-e", "--epochs", type=int, default=10, help="number of epochs")
+    parser.add_argument("-d", "--device", type=str, default='cpu', help="device to run the model on")
+    parser.add_argument("-hs", "--hidden", type=int, default=256, help="hidden size of transformer model")
+    parser.add_argument("-l", "--layers", type=int, default=8, help="number of layers")
+    parser.add_argument("-a", "--attn_heads", type=int, default=8, help="number of attention heads")
+    parser.add_argument("-s", "--seq_len", type=int, default=128, help="maximum sequence len")
+    parser.add_argument("-c", "--train_dataset", default="kinyastory_data/train_stories.txt", type=str, help="train dataset for train bert")
+    parser.add_argument("-t", "--test_dataset", type=str, default="kinyastory_data/val_stories.txt", help="test set for evaluate train set")
+    parser.add_argument("-o", "--output_path", default = "output/bert.model_finetuned" , type=str, help="ex)output/bert.model_finetuned")
+    parser.add_argument("-p", "--last_saved_epoch", type=int, default=None, help="epoch of last saved model")
+    parser.add_argument("-b", "--batch_size", type=int, default=64, help="number of batch_size")
+    parser.add_argument("--lr", type=float, default=1e-3, help="learning rate of adam")
+    parser.add_argument("--text", type=str, default="Ejo ndikwiga nagize abashyitsi baje kunsura. Ndashaka kubona niba bazakwiga cyangwa se bazasura. [MASK] ni umwihariko w'abashyitsi.", help="text to generate")
+    
+
+    args = parser.parse_args()
+    print(args)
+    kinyaBertInference = KinyaBertInference(args.output_path,args.last_saved_epoch, args.device)
+    print(kinyaBertInference.generate_text(args.text))
+
+if __name__ == "__main__":
+    main()
