@@ -66,6 +66,8 @@ def load_model(model, model_path,device='cpu'):
         return model
 
 def generate_text(model, tokenizer, input_text, max_len=128,device='cpu'):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = model.to(device)
     encoded_input = tokenizer(input_text, return_tensors='pt',truncation=True, padding='max_length', max_length=max_len)
     encoded_input = {key: tensor.to(device) for key, tensor in encoded_input.items()}
     output = model(**encoded_input)
@@ -152,8 +154,8 @@ def main():
     wandb.watch(model)
     for epoch in range(args.epochs):
         # Clean the GPU cache
-        # torch.cuda.empty_cache()
-        # gc.collect()
+        torch.cuda.empty_cache()
+        gc.collect()
 
         model.train()
         train_loss = 0
