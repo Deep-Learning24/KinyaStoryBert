@@ -156,64 +156,57 @@ def main():
         # Clean the GPU cache
         torch.cuda.empty_cache()
         gc.collect()
-
+    
         model.train()
         train_loss = 0
         val_loss = 0
-
-        progress_bar = tqdm(train_loader, desc="Epoch {}".format(epoch))
-        for batch in progress_bar:
-            # Forward pass
-            # Get the input and labels from the batch
-            inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
-            labels = batch["input_ids"].to(args.device)
-            outputs = model(**inputs)
-            loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
-            train_loss += loss.item()
-            progress_bar.set_postfix({'training_loss': '{:.3f}'.format(loss.item()), 'perplexity': '{:.3f}'.format(calculate_perplexity(loss.item()) )})
-            # Backward pass and optimization
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-
-        
-        total_train_loss += train_loss
-        perplexity = calculate_perplexity(train_loss)
-        total_train_perplexity += perplexity
-        
-        
-        wandb.log({"training_loss": train_loss, "train perplexity": perplexity})
-
-        # Evaluate the model on the validation data
-        model.eval()
-        with torch.no_grad():
-            progress_bar = tqdm(val_loader, desc="Epoch {}".format(epoch))
+    
+        with tqdm(train_loader, desc="Epoch {}".format(epoch)) as progress_bar:
             for batch in progress_bar:
-                # move the tensors to the device
+                # Forward pass
+                # Get the input and labels from the batch
                 inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
                 labels = batch["input_ids"].to(args.device)
                 outputs = model(**inputs)
                 loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
-                val_loss += loss.item()
-                progress_bar.set_postfix({'validation_loss': '{:.3f}'.format(loss.item()), 'perplexity': '{:.3f}'.format(calculate_perplexity(loss.item()))})
-       
+                train_loss += loss.item()
+                progress_bar.set_postfix({'training_loss': '{:.3f}'.format(loss.item()), 'perplexity': '{:.3f}'.format(calculate_perplexity(loss.item()) )})
+                # Backward pass and optimization
+                loss.backward()
+                optimizer.step()
+                optimizer.zero_grad()
+    
+        total_train_loss += train_loss
+        perplexity = calculate_perplexity(train_loss)
+        total_train_perplexity += perplexity
+    
+        wandb.log({"training_loss": train_loss, "train perplexity": perplexity})
+    
+        # Evaluate the model on the validation data
+        model.eval()
+        with torch.no_grad():
+            with tqdm(val_loader, desc="Epoch {}".format(epoch)) as progress_bar:
+                for batch in progress_bar:
+                    # move the tensors to the device
+                    inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
+                    labels = batch["input_ids"].to(args.device)
+                    outputs = model(**inputs)
+                    loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
+                    val_loss += loss.item()
+                    progress_bar.set_postfix({'validation_loss': '{:.3f}'.format(loss.item()), 'perplexity': '{:.3f}'.format(calculate_perplexity(loss.item()))})
+    
         total_val_loss += val_loss
         val_perplexity = calculate_perplexity(val_loss)
-        
+    
         candidate = " ".join(decode(tokenizer, inputs["input_ids"].squeeze().tolist()))
         reference = " ".join(decode(tokenizer, labels.squeeze().tolist()))
-
-        # print(f"Reference: {reference}")
-        # print(f"Candidate: {candidate}")
+    
         bleu_score = calculate_bleu(reference, candidate)
-
-        
-        # rouge_score = calculate_rouge(reference, candidate)
-        # print(f"ROUGE score: {rouge_score}")
+    
         total_val_perplexity += val_perplexity
         total_bleu += bleu_score
-        #total_rouge += rouge_score
         wandb.log({"validation_loss": val_loss, "validation perplexity": val_perplexity, "bleu_score": bleu_score})
+    
         # Save the model after each epoch
         if bleu_score > best_bleu:
             best_bleu = bleu_score
