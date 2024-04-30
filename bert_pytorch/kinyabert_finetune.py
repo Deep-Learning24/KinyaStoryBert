@@ -14,7 +14,7 @@ from KinyaTokenizer import KinyaTokenizer, encode, decode
 from tqdm import tqdm
 from  torch.utils.data import DataLoader
 import wandb
-
+import numpy as np
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 from nltk.translate.bleu_score import SmoothingFunction
 from nltk.translate.bleu_score import sentence_bleu
@@ -34,8 +34,11 @@ def collate_fn(batch):
 
     return {'input_ids': input_ids, 'attention_mask': attention_mask, 'token_type_ids': token_type_ids, 'labels': labels}
 
+
+
 def calculate_perplexity(loss):
-    perplexity = math.exp(loss)
+    clipped_loss = np.clip(loss, None, 50)  # clip to avoid overflow
+    perplexity = np.exp(clipped_loss)
     return perplexity
 
 
@@ -178,7 +181,7 @@ def main():
         total_val_perplexity += val_perplexity
         total_bleu += bleu_score
         #total_rouge += rouge_score
-        wandb.log({"validation_loss": val_loss, "validation perplexity": val_perplexity, "bleu_score": bleu_score, "rouge_score": rouge_score})
+        wandb.log({"validation_loss": val_loss, "validation perplexity": val_perplexity, "bleu_score": bleu_score})
         # Save the model after each epoch
         torch.save(model.state_dict(), f"{args.output_path}_epoch_{epoch}.pth")
         print(f"Total training loss: {total_train_loss}")
