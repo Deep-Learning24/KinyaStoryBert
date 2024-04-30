@@ -202,6 +202,12 @@ def main():
                 # Forward pass
                 # Get the input and labels from the batch
                 inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
+                # Assuming `inputs` is a dictionary containing the input tensors
+                for key, tensor in inputs.items():
+                    if tensor.dim() == 1:
+                        # Reshape the tensor to have a batch dimension
+                        inputs[key] = tensor.view(1, -1)
+                
                 labels = batch["input_ids"].to(args.device)
                 outputs = model(**inputs)
                 loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
