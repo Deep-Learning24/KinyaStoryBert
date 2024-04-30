@@ -1,6 +1,7 @@
 
 import argparse
 import gc
+import math
 import sys
 
 import torch
@@ -15,7 +16,9 @@ from  torch.utils.data import DataLoader
 import wandb
 
 from transformers import AutoTokenizer, AutoModelForMaskedLM
-
+from nltk.translate.bleu_score import SmoothingFunction
+from nltk.translate.bleu_score import sentence_bleu
+from rouge import Rouge
 import torch.nn as nn
 
 def collate_fn(batch):
@@ -29,6 +32,23 @@ def collate_fn(batch):
 
     return {'input_ids': input_ids, 'attention_mask': attention_mask, 'token_type_ids': token_type_ids, 'labels': labels}
 
+def calculate_perplexity(loss):
+    perplexity = math.exp(loss)
+    return perplexity
+
+
+def calculate_bleu(reference, candidate):
+    reference = [reference.split()]
+    candidate = candidate.split()
+    smoothie = SmoothingFunction().method4
+    score = sentence_bleu(reference, candidate, smoothing_function=smoothie)
+    return score
+
+def calculate_rouge(reference, candidate):
+    rouge = Rouge()
+    
+    scores = rouge.get_scores(candidate, reference)
+    return scores
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--epochs", type=int, default=10, help="number of epochs")
@@ -69,46 +89,106 @@ def main():
     # Train the model
     total_train_loss = 0
     total_val_loss = 0
+    total_train_perplexity = 0
+    total_val_perplexity = 0
+    total_bleu = 0
+    total_rouge = 0
+    
+    config = {  
+        "epochs": args.epochs,
+        "device": args.device,
+        "hidden": args.hidden,
+        "layers": args.layers,
+        "attn_heads": args.attn_heads,
+        "seq_len": args.seq_len,
+        "train_dataset": args.train_dataset,
+        "test_dataset": args.test_dataset,
+        "output_path": args.output_path,
+        "last_saved_epoch": args.last_saved_epoch,
+        "batch_size": args.batch_size,
+        "lr": args.lr
+    }
+    wandb.login(key="3644f3d76a394594794c1b136a20f75303e871ba")
+    wandb.init(
+        project="project-ablations", 
+        config=config,
+        reinit=True,
+        name="KinyaBERT-large-finetune",
+        notes="Fine-tuning KinyaBERT-large on KinyaStoryNewDataset",
+        tags=["kinyabert", "kinyastory", "finetuning"],
+        id="kinyabert-large-finetune"
+        )
+    wandb.watch(model)
     for epoch in tqdm(range(args.epochs)):
         model.train()
         train_loss = 0
         val_loss = 0
-        for epoch in tqdm(range(args.epochs)):
-            model.train()
-            train_loss = 0
-            val_loss = 0
-            for batch in train_loader:
-                # Forward pass
-                # Get the input and labels from the batch
-                inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
-                labels = batch["labels"].to(args.device)
-                outputs = model(**inputs)
-                loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
-                train_loss += loss.item()
-                # Backward pass and optimization
-                loss.backward()
-                optimizer.step()
-                optimizer.zero_grad()
+
+        
+        progress_bar = tqdm(train_loader, desc="Epoch {}".format(epoch))
+        for batch in progress_bar:
+            # Forward pass
+            # Get the input and labels from the batch
+            inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
+            labels = batch["labels"].to(args.device)
+            outputs = model(**inputs)
+            loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
+            train_loss += loss.item()
+            progress_bar.set_postfix({'training_loss': '{:.3f}'.format(loss.item())})
+            # Backward pass and optimization
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
         print(f"Training loss: {train_loss}")
         total_train_loss += train_loss
+        perplexity = calculate_perplexity(train_loss)
+        total_train_perplexity += perplexity
+        print(f"Perplexity: {perplexity}")
+        
+        wandb.log({"training_loss": train_loss, "train perplexity": perplexity})
 
         # Evaluate the model on the validation data
         model.eval()
         with torch.no_grad():
-            for batch in val_loader:
+            progress_bar = tqdm(train_loader, desc="Epoch {}".format(epoch))
+            for batch in progress_bar:
                 # move the tensors to the device
                 inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
                 labels = batch["labels"].to(args.device)
                 outputs = model(**inputs)
                 loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
                 val_loss += loss.item()
+                progress_bar.set_postfix({'validation_loss': '{:.3f}'.format(loss.item())})
         print(f"Validation loss: {val_loss}")
         total_val_loss += val_loss
+        val_perplexity = calculate_perplexity(val_loss)
+        print(f"Validation perplexity: {val_perplexity}")
+        candidate = " ".join(decode(tokenizer, inputs["input_ids"].squeeze().tolist()))
+        reference = " ".join(decode(tokenizer, labels.squeeze().tolist()))
+        bleu_score = calculate_bleu(reference, candidate)
+
+        print(f"BLEU score: {bleu_score}")
+        rouge_score = calculate_rouge(reference, candidate)
+        print(f"ROUGE score: {rouge_score}")
+        total_val_perplexity += val_perplexity
+        total_bleu += bleu_score
+        total_rouge += rouge_score
+        wandb.log({"validation_loss": val_loss, "validation perplexity": val_perplexity, "bleu_score": bleu_score, "rouge_score": rouge_score})
         # Save the model after each epoch
         torch.save(model.state_dict(), f"{args.output_path}_epoch_{epoch}.pth")
-    print(f"Total training loss: {total_train_loss}")
-    print(f"Total validation loss: {total_val_loss}")
+        print(f"Total training loss: {total_train_loss}")
+        print(f"Total validation loss: {total_val_loss}")
+        print(f"Total training perplexity: {total_train_perplexity}")
+        print(f"Total validation perplexity: {total_val_perplexity}")
+        print(f"Total BLEU score: {total_bleu}")
+        print(f"Total ROUGE score: {total_rouge}")
+        wandb.log({"total training loss": total_train_loss, "total validation loss": total_val_loss, "total training perplexity": total_train_perplexity, "total validation perplexity": total_val_perplexity, "total bleu score": total_bleu, "total rouge score": total_rouge})
+        # Log the average training and validation loss for the epoch
+        average= {"average training loss": total_train_loss / (epoch + 1), "average validation loss": total_val_loss / (epoch + 1), "average training perplexity": total_train_perplexity / (epoch + 1), "average validation perplexity": total_val_perplexity / (epoch + 1), "average bleu score": total_bleu / (epoch + 1), "average rouge score": total_rouge / (epoch + 1)}
+        print(average)
+        wandb.log(average)
 
+    wandb.finish()
 
 if __name__ == "__main__":
     main()
