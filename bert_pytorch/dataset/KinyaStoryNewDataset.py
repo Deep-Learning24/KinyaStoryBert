@@ -84,31 +84,34 @@ class KinyaStoryNewDataset(Dataset):
     def random_word(self, sentence):
         tokens = self.tokenizer.tokenize(sentence)
         output_label = []
-
+        mask = []
+    
         for i, token in enumerate(tokens):
             prob = random.random()
             if prob < 0.15:
                 prob /= 0.15
-
+    
                 # 80% randomly change token to mask token
                 if prob < 0.8:
                     tokens[i] = self.vocab["[MASK]"]
-
+    
                 # 10% randomly change token to random token
                 elif prob < 0.9:
                     tokens[i] = random.randrange(len(self.vocab))
-
+    
                 # 10% randomly change token to current token
                 else:
                     tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
-
+    
                 output_label.append(self.vocab.get(token, self.vocab["[UNK]"]))
-
+                mask.append(1)
+    
             else:
                 tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
                 output_label.append(0)
-
-        return tokens, output_label
+                mask.append(0)
+    
+        return tokens, output_label, mask
     
     def get_random_line(self):
         if self.on_memory:
@@ -147,28 +150,32 @@ class KinyaStoryNewDataset(Dataset):
         
     def __getitem__(self, index):
         t1, t2, is_next_label = self.random_sent(index)
-        t1_random, t1_label = self.random_word(t1)
-        t2_random, t2_label = self.random_word(t2)
-    
+        t1_random, t1_label, t1_mask = self.random_word(t1)
+        t2_random, t2_label, t2_mask = self.random_word(t2)
+
         # [CLS] tag = SOS tag, [SEP] tag = EOS tag
         t1 = [self.vocab["[CLS]"]] + t1_random + [self.vocab["[SEP]"]]
         t2 = t2_random + [self.vocab["[SEP]"]]
-    
+
         t1_label = [self.vocab["[PAD]"]] + t1_label + [self.vocab["[PAD]"]]
         t2_label = t2_label + [self.vocab["[PAD]"]]
-    
+
+        t1_mask = [0] + t1_mask + [0]
+        t2_mask = t2_mask + [0]
+
         segment_label = ([0 for _ in range(len(t1))] + [1 for _ in range(len(t2))])[:self.seq_len]
         bert_input = (t1 + t2)[:self.seq_len]
         bert_label = (t1_label + t2_label)[:self.seq_len]
-    
+        mask = (t1_mask + t2_mask)[:self.seq_len]
+
         padding = [self.vocab["[PAD]"] for _ in range(self.seq_len - len(bert_input))]
-        bert_input.extend(padding), bert_label.extend(padding), segment_label.extend(padding)
-    
+        bert_input.extend(padding), bert_label.extend(padding), segment_label.extend(padding), mask.extend([0]*len(padding))
+
         # Convert inputs and labels to PyTorch tensors
         bert_input = torch.tensor(bert_input, dtype=torch.long)
         bert_label = torch.tensor(bert_label, dtype=torch.long)
         segment_label = torch.tensor(segment_label, dtype=torch.long)
-        #print(bert_input, bert_label, segment_label)
-    
-        return bert_input, bert_label, segment_label
+        mask = torch.tensor(mask, dtype=torch.long)
+
+        return bert_input, bert_label, segment_label, mask
         

@@ -25,7 +25,9 @@ def collate_fn(batch):
     # Collate the input tensors
     input_ids = torch.stack([item[0] for item in batch])
     token_type_ids = torch.stack([item[2] for item in batch])
-    attention_mask = torch.ones_like(input_ids)
+
+    # Create the attention mask
+    attention_mask = input_ids.ne(0).long()
 
     # Collate the labels
     labels = torch.stack([item[1] for item in batch])
@@ -84,7 +86,7 @@ def main():
 
     # Define your optimizer and loss function
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
+    loss_fn = nn.CrossEntropyLoss(ignore_index=0) # ignore padding token
 
     # Train the model
     total_train_loss = 0
@@ -92,7 +94,7 @@ def main():
     total_train_perplexity = 0
     total_val_perplexity = 0
     total_bleu = 0
-    total_rouge = 0
+    #total_rouge = 0
     
     config = {  
         "epochs": args.epochs,
@@ -150,7 +152,7 @@ def main():
         # Evaluate the model on the validation data
         model.eval()
         with torch.no_grad():
-            progress_bar = tqdm(train_loader, desc="Epoch {}".format(epoch))
+            progress_bar = tqdm(val_loader, desc="Epoch {}".format(epoch))
             for batch in progress_bar:
                 # move the tensors to the device
                 inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
@@ -165,14 +167,17 @@ def main():
         print(f"Validation perplexity: {val_perplexity}")
         candidate = " ".join(decode(tokenizer, inputs["input_ids"].squeeze().tolist()))
         reference = " ".join(decode(tokenizer, labels.squeeze().tolist()))
+
+        # print(f"Reference: {reference}")
+        # print(f"Candidate: {candidate}")
         bleu_score = calculate_bleu(reference, candidate)
 
         print(f"BLEU score: {bleu_score}")
-        rouge_score = calculate_rouge(reference, candidate)
-        print(f"ROUGE score: {rouge_score}")
+        # rouge_score = calculate_rouge(reference, candidate)
+        # print(f"ROUGE score: {rouge_score}")
         total_val_perplexity += val_perplexity
         total_bleu += bleu_score
-        total_rouge += rouge_score
+        #total_rouge += rouge_score
         wandb.log({"validation_loss": val_loss, "validation perplexity": val_perplexity, "bleu_score": bleu_score, "rouge_score": rouge_score})
         # Save the model after each epoch
         torch.save(model.state_dict(), f"{args.output_path}_epoch_{epoch}.pth")
@@ -181,10 +186,10 @@ def main():
         print(f"Total training perplexity: {total_train_perplexity}")
         print(f"Total validation perplexity: {total_val_perplexity}")
         print(f"Total BLEU score: {total_bleu}")
-        print(f"Total ROUGE score: {total_rouge}")
-        wandb.log({"total training loss": total_train_loss, "total validation loss": total_val_loss, "total training perplexity": total_train_perplexity, "total validation perplexity": total_val_perplexity, "total bleu score": total_bleu, "total rouge score": total_rouge})
+        #print(f"Total ROUGE score: {total_rouge}")
+        wandb.log({"total training loss": total_train_loss, "total validation loss": total_val_loss, "total training perplexity": total_train_perplexity, "total validation perplexity": total_val_perplexity, "total bleu score": total_bleu})
         # Log the average training and validation loss for the epoch
-        average= {"average training loss": total_train_loss / (epoch + 1), "average validation loss": total_val_loss / (epoch + 1), "average training perplexity": total_train_perplexity / (epoch + 1), "average validation perplexity": total_val_perplexity / (epoch + 1), "average bleu score": total_bleu / (epoch + 1), "average rouge score": total_rouge / (epoch + 1)}
+        average= {"average training loss": total_train_loss / (epoch + 1), "average validation loss": total_val_loss / (epoch + 1), "average training perplexity": total_train_perplexity / (epoch + 1), "average validation perplexity": total_val_perplexity / (epoch + 1), "average bleu score": total_bleu / (epoch + 1)}
         print(average)
         wandb.log(average)
 
