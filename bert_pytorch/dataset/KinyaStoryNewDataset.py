@@ -77,12 +77,18 @@ class KinyaStoryNewDataset(Dataset):
         # Tokenize the text and create the input dictionary
         inputs = self.tokenizer(text, truncation=True, padding='max_length', max_length=self.seq_len, return_tensors='pt')
 
-        # Create the labels by shifting the input_ids to the right
+                # Create the labels by shifting the input_ids to the right
         labels = inputs["input_ids"].clone()
-        labels[:-1] = inputs["input_ids"][1:]
-        labels[-1] = self.tokenizer.pad_token_id
 
-        # Squeeze the tensors and return them
-        inputs = {key: tensor.squeeze(0) for key, tensor in inputs.items()}
-        inputs["labels"] = labels.squeeze(0)
-        return inputs
+        # Shift the inner list to the right
+        labels[0, :-1] = inputs["input_ids"][0, 1:]
+
+
+        # Set the first token of the inner list to -100
+        labels[0, -1] = -100
+
+
+        # Set the last token of the inner list to the pad_token_id
+        labels[:, -1] = -100
+
+        return inputs, labels

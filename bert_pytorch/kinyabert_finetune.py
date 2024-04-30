@@ -52,7 +52,7 @@ def main():
 
     # Define your optimizer and loss function
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
 
     # Train the model
     total_train_loss = 0
@@ -64,9 +64,10 @@ def main():
         for batch in train_loader:
             # Forward pass
             #print(batch)
-            outputs= model(**batch)
+            inputs,lables = batch
+            outputs= model(**inputs)
             #print(outputs)
-            loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), batch["labels"].view(-1))
+            loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), lables.view(-1))
             train_loss += loss.item()
             # Backward pass and optimization
             loss.backward()
@@ -79,8 +80,9 @@ def main():
         model.eval()
         with torch.no_grad():
             for batch in val_loader:
-                outputs = model(**batch)
-                val_loss =  loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), batch["labels"].view(-1))
+                inputs,lables = batch
+                outputs = model(**inputs)
+                val_loss =  loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), lables.view(-1))
                 # Compute validation metrics here
                 # print(f"Validation loss: {val_loss}")
                 val_loss += val_loss.item()

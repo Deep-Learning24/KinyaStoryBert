@@ -8,6 +8,7 @@ output/
 *.pt 
 *.pth
 *.txt
+*.pdf
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
