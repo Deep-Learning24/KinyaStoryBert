@@ -34,7 +34,7 @@ def collate_fn(batch):
                 'token_type_ids': torch.empty((0, sequence_length), dtype=torch.long), 
                 'labels': torch.empty((0,), dtype=torch.long)}
 
-    # Rest of the function...
+   
 
     # Collate the input tensors
     input_ids = torch.stack([item[0] for item in batch])
@@ -143,6 +143,7 @@ def main():
     total_bleu = 0
     #total_rouge = 0
     best_bleu = 0
+    best_loss = np.inf
     
     config = {  
         "epochs": args.epochs,
@@ -231,13 +232,13 @@ def main():
         reference = " ".join(decode(tokenizer, labels.squeeze().tolist()))
     
         bleu_score = calculate_bleu(reference, candidate)
-        if bleu_score > best_bleu:
-            best_bleu = bleu_score
+        if best_loss > train_loss:
+            best_loss = train_loss
             torch.save(model.state_dict(), f"{args.output_path}_epoch_{epoch}.pth")
             gc.collect()
             print(f"Model saved at epoch {epoch}")
     
-        wandb.log({"training_loss": train_loss, "train perplexity": perplexity})
+        wandb.log({"training_loss": train_loss, "train perplexity": perplexity, "bleu_score": bleu_score})
     
         # # Evaluate the model on the validation data
         # model.eval()
