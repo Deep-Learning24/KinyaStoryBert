@@ -25,6 +25,9 @@ def collate_fn(batch):
     
     # Collate the labels
     labels = torch.stack([item['labels'] for item in batch])
+
+    # Move the tensors to the device
+    
     
     return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
 
@@ -73,6 +76,9 @@ def main():
         val_loss = 0
         for batch in train_loader:
             # Forward pass
+            # move the tensors to the device
+            for key in batch:
+                batch[key] = batch[key].to(args.device)
             outputs = model(**batch)
             loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), batch["labels"].view(-1))
             train_loss += loss.item()
@@ -87,6 +93,9 @@ def main():
         model.eval()
         with torch.no_grad():
             for batch in val_loader:
+                # move the tensors to the device
+                for key in batch:
+                    batch[key] = batch[key].to(args.device)
                 outputs = model(**batch)
                 val_loss =  loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), batch["labels"].view(-1))
                 val_loss += val_loss.item()
