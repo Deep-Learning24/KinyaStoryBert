@@ -303,6 +303,8 @@ class KinyaStoryBERTTrainer:
             if name in model_weights:
                 model_weights[name] = param
                 print(f"Loaded {name} from pretrained model")
+            else:
+                print(f"Skipped {name} from pretrained model")
     
         # Load the weights into self.model
         self.model.load_state_dict(model_weights)
