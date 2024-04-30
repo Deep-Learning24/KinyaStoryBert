@@ -55,19 +55,25 @@ def main():
     loss_fn = nn.CrossEntropyLoss()
 
     # Train the model
-    for epoch in range(args.epochs):
+    total_train_loss = 0
+    total_val_loss = 0
+    for epoch in tqdm(range(args.epochs)):
         model.train()
+        train_loss = 0
+        val_loss = 0
         for batch in train_loader:
             # Forward pass
             #print(batch)
             outputs= model(**batch)
             #print(outputs)
             loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), batch["labels"].view(-1))
-            print(f"Training loss: {loss}")
+            train_loss += loss.item()
             # Backward pass and optimization
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
+        print(f"Training loss: {train_loss}")
+        total_train_loss += train_loss
 
         # Evaluate the model on the validation data
         model.eval()
@@ -76,10 +82,15 @@ def main():
                 outputs = model(**batch)
                 val_loss =  loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), batch["labels"].view(-1))
                 # Compute validation metrics here
-                print(f"Validation loss: {val_loss}")
-
+                # print(f"Validation loss: {val_loss}")
+                val_loss += val_loss.item()
+        print(f"Validation loss: {val_loss}")
+        total_val_loss += val_loss
         # Save the model after each epoch
         torch.save(model.state_dict(), f"{args.output_path}_epoch_{epoch}.pth")
+    print(f"Total training loss: {total_train_loss}")
+    print(f"Total validation loss: {total_val_loss}")
+
 
 if __name__ == "__main__":
     main()
