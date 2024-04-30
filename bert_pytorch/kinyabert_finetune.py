@@ -52,8 +52,8 @@ def main():
     vocab = tokenizer.get_vocab()
 
     # Load your training and validation data
-    train_dataset = KinyaStoryNewDataset(args.train_dataset, tokenizer, seq_len=args.seq_len, on_memory=True)
-    val_dataset = KinyaStoryNewDataset(args.test_dataset, tokenizer, seq_len=args.seq_len, on_memory=True) if args.test_dataset is not None else None
+    train_dataset = KinyaStoryNewDataset(args.train_dataset, tokenizer, seq_len=args.seq_len, on_memory=False)
+    val_dataset = KinyaStoryNewDataset(args.test_dataset, tokenizer, seq_len=args.seq_len, on_memory=False) if args.test_dataset is not None else None
 
 
     # Create a DataLoader for your training and validation data
