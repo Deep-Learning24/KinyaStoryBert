@@ -102,7 +102,7 @@ def main():
     parser.add_argument("-a", "--attn_heads", type=int, default=8, help="number of attention heads")
     parser.add_argument("-s", "--seq_len", type=int, default=128, help="maximum sequence len")
     parser.add_argument("-c", "--train_dataset", default="kinyastory_data/train_stories.txt", type=str, help="train dataset for train bert")
-    parser.add_argument("-t", "--test_dataset", type=str, default="kinyastory_data/train_stories.txt", help="test set for evaluate train set")
+    parser.add_argument("-t", "--test_dataset", type=str, default="kinyastory_data/val_stories.txt", help="test set for evaluate train set")
     parser.add_argument("-o", "--output_path", default = "output/bert.model_finetuned" , type=str, help="ex)output/bert.model_finetuned")
     parser.add_argument("-p", "--last_saved_epoch", type=int, default=None, help="epoch of last saved model")
     parser.add_argument("-b", "--batch_size", type=int, default=64, help="number of batch_size")
@@ -227,50 +227,52 @@ def main():
         total_train_loss += train_loss
         perplexity = calculate_perplexity(train_loss)
         total_train_perplexity += perplexity
-    
-        wandb.log({"training_loss": train_loss, "train perplexity": perplexity})
-    
-        # Evaluate the model on the validation data
-        model.eval()
-        with torch.no_grad():
-            with tqdm(val_loader, desc="Epoch {}".format(epoch)) as progress_bar:
-                for batch in progress_bar:
-                    # move the tensors to the device
-                    inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
-                    labels = batch["input_ids"].to(args.device)
-                    outputs = model(**inputs)
-                    loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
-                    val_loss += loss.item()
-                    progress_bar.set_postfix({'validation_loss': '{:.3f}'.format(loss.item()), 'perplexity': '{:.3f}'.format(calculate_perplexity(loss.item()))})
-    
-        total_val_loss += val_loss
-        val_perplexity = calculate_perplexity(val_loss)
-    
         candidate = " ".join(decode(tokenizer, inputs["input_ids"].squeeze().tolist()))
         reference = " ".join(decode(tokenizer, labels.squeeze().tolist()))
     
         bleu_score = calculate_bleu(reference, candidate)
-    
-        total_val_perplexity += val_perplexity
-        total_bleu += bleu_score
-        wandb.log({"validation_loss": val_loss, "validation perplexity": val_perplexity, "bleu_score": bleu_score})
-    
-        # Save the model after each epoch
         if bleu_score > best_bleu:
             best_bleu = bleu_score
             torch.save(model.state_dict(), f"{args.output_path}_epoch_{epoch}.pth")
             gc.collect()
             print(f"Model saved at epoch {epoch}")
+    
+        wandb.log({"training_loss": train_loss, "train perplexity": perplexity})
+    
+        # # Evaluate the model on the validation data
+        # model.eval()
+        # with torch.no_grad():
+        #     with tqdm(val_loader, desc="Epoch {}".format(epoch)) as progress_bar:
+        #         for batch in progress_bar:
+        #             # move the tensors to the device
+        #             inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
+        #             labels = batch["input_ids"].to(args.device)
+        #             outputs = model(**inputs)
+        #             loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
+        #             val_loss += loss.item()
+        #             progress_bar.set_postfix({'validation_loss': '{:.3f}'.format(loss.item()), 'perplexity': '{:.3f}'.format(calculate_perplexity(loss.item()))})
+    
+        # total_val_loss += val_loss
+        # val_perplexity = calculate_perplexity(val_loss)
+    
+        
+    
+        # total_val_perplexity += val_perplexity
+        # total_bleu += bleu_score
+        # wandb.log({"validation_loss": val_loss, "validation perplexity": val_perplexity, "bleu_score": bleu_score})
+    
+        # Save the model after each epoch
+        
 
     print(f"Total training loss: {total_train_loss}")
-    print(f"Total validation loss: {total_val_loss}")
+
     print(f"Total training perplexity: {total_train_perplexity}")
-    print(f"Total validation perplexity: {total_val_perplexity}")
+    
     print(f"Total BLEU score: {total_bleu}")
     #print(f"Total ROUGE score: {total_rouge}")
-    wandb.log({"total training loss": total_train_loss, "total validation loss": total_val_loss, "total training perplexity": total_train_perplexity, "total validation perplexity": total_val_perplexity, "total bleu score": total_bleu})
+    wandb.log({"total training loss": total_train_loss, "total training perplexity": total_train_perplexity})
     # Log the average training and validation loss for the epoch
-    average= {"average training loss": total_train_loss / (epoch + 1), "average validation loss": total_val_loss / (epoch + 1), "average training perplexity": total_train_perplexity / (epoch + 1), "average validation perplexity": total_val_perplexity / (epoch + 1), "average bleu score": total_bleu / (epoch + 1)}
+    average= {"average training loss": total_train_loss / (epoch + 1), "average training perplexity": total_train_perplexity / (epoch + 1), "average bleu score": total_bleu / (epoch + 1)}
     print(average)
     wandb.log(average)
 
