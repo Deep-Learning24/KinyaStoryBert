@@ -20,11 +20,13 @@ import torch.nn as nn
 
 def collate_fn(batch):
     # Collate the input tensors
-    input_ids = torch.stack([item['input_ids'] for item in batch])
-    attention_mask = torch.stack([item['attention_mask'] for item in batch])
-    token_type_ids = torch.stack([item['token_type_ids'] for item in batch])
+    input_ids = torch.stack([item[0] for item in batch])
+    token_type_ids = torch.stack([item[2] for item in batch])
+    attention_mask = torch.ones_like(input_ids)
+
     # Collate the labels
-    labels = torch.stack([item['labels'] for item in batch])
+    labels = torch.stack([item[1] for item in batch])
+
     return {'input_ids': input_ids, 'attention_mask': attention_mask, 'token_type_ids': token_type_ids, 'labels': labels}
 
 def main():

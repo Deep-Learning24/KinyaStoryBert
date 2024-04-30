@@ -1,5 +1,6 @@
 import os
 import re
+from typing import Tuple
 from torch.utils.data import Dataset
 import tqdm
 import torch
@@ -42,56 +43,132 @@ def preprocess_corpus(corpus_path, output_path, final_output_path):
     os.remove(output_path)
 
 class KinyaStoryNewDataset(Dataset):
-    def __init__(self, file, tokenizer, seq_len=128, on_memory=True):
+    def __init__(self, file, tokenizer, seq_len=128, on_memory=True,corpus_lines=None):
         self.tokenizer = tokenizer
+        self.vocab = tokenizer.get_vocab()
         self.seq_len = seq_len
         self.on_memory = on_memory
         self.file = file
         self.data = []
-
-        # Load the data into memory
-        if self.on_memory:
-            with open(file, "r", encoding="ISO-8859-1") as f:
-                for line in f:
-                    self.data.append(line.strip())
-        else:
-            self.file = open(file, "r", encoding="ISO-8859-1")
-        
+        self.corpus_lines = corpus_lines
+    
         corpus_path_file_name = os.path.splitext(file)[0]
-        
+    
         output_path = f"{corpus_path_file_name}_preprocessed.txt"
         final_output_path = f"{corpus_path_file_name}_final.txt"
         preprocess_corpus(file, output_path, final_output_path)
+    
+        with open(final_output_path, "r", encoding="ISO-8859-1") as f:
+            if self.corpus_lines is None and not on_memory:
+                self.corpus_lines = 0  # Initialize to 0 if it's None
+                for _ in tqdm.tqdm(f, desc="Loading Dataset", total=corpus_lines):
+                    self.corpus_lines += 1
+    
+            if on_memory:
+                self.lines = [line[:-1].split("\t")
+                              for line in tqdm.tqdm(f, desc="Loading Dataset", total=corpus_lines)]
+                self.corpus_lines = len(self.lines)
+                
+    
+        if not on_memory:
+            self.file = open(final_output_path, "r", encoding="ISO-8859-1")
+            self.random_file = open(final_output_path, "r", encoding="ISO-8859-1")
+    
+            for _ in range(random.randint(0, self.corpus_lines if self.corpus_lines < 1000 else 1000)):
+                self.random_file.__next__()
 
     def __len__(self):
-        return len(self.data)
+        return self.corpus_lines
+    
 
-    def __getitem__(self, index):
-        # Get the text for this index
+    def random_word(self, sentence):
+        tokens = self.tokenizer.tokenize(sentence)
+        output_label = []
+
+        for i, token in enumerate(tokens):
+            prob = random.random()
+            if prob < 0.15:
+                prob /= 0.15
+
+                # 80% randomly change token to mask token
+                if prob < 0.8:
+                    tokens[i] = self.vocab["[MASK]"]
+
+                # 10% randomly change token to random token
+                elif prob < 0.9:
+                    tokens[i] = random.randrange(len(self.vocab))
+
+                # 10% randomly change token to current token
+                else:
+                    tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
+
+                output_label.append(self.vocab.get(token, self.vocab["[UNK]"]))
+
+            else:
+                tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
+                output_label.append(0)
+
+        return tokens, output_label
+    
+    def get_random_line(self):
         if self.on_memory:
-            text = self.data[index]
+            return self.lines[random.randrange(len(self.lines))][1]
+
+        line = self.file.__next__()
+        if line is None:
+            self.file.close()
+            self.file = open(self.corpus_path, "r", encoding=self.encoding)
+            for _ in range(random.randint(self.corpus_lines if self.corpus_lines < 1000 else 1000)):
+                self.random_file.__next__()
+            line = self.random_file.__next__()
+        return line[:-1].split("\t")[1]
+    
+    def random_sent(self, index):
+        t1, t2 = self.get_corpus_line(index)
+
+        # output_text, label(isNotNext:0, isNext:1)
+        if random.random() > 0.5:
+            return t1, t2, 1
         else:
-            self.file.seek(index)
-            text = self.file.readline().strip()
+            return t1, self.get_random_line(), 0
+        
+    def get_corpus_line(self, item):
+        if self.on_memory:
+            return self.lines[item][0], self.lines[item][1]
+        else:
+            line = self.file.__next__()
+            if line is None:
+                self.file.close()
+                self.file = open(self.corpus_path, "r", encoding=self.encoding)
+                line = self.file.__next__()
 
-        # Tokenize the text and create the input dictionary
-        inputs = self.tokenizer(text, truncation=True, padding='max_length', max_length=self.seq_len, return_tensors='pt')
-
-                # Create the labels by shifting the input_ids to the right
-        labels = inputs["input_ids"].clone()
-
-        # Shift the inner list to the right
-        labels[0, :-1] = inputs["input_ids"][0, 1:]
-
-
-        # Set the first token of the inner list to -100
-        labels[0, -1] = -100
-
-
-        # Set the last token of the inner list to the pad_token_id
-        labels[:, -1] = -100
-
-        return_data = {key: tensor.squeeze(0) for key, tensor in inputs.items()}
-        return_data["labels"] = labels.squeeze(0)
-
-        return return_data
+            t1, t2 = line[:-1].split("\t")
+            return t1, t2
+        
+    def __getitem__(self, index):
+        t1, t2, is_next_label = self.random_sent(index)
+        t1_random, t1_label = self.random_word(t1)
+        t2_random, t2_label = self.random_word(t2)
+    
+        # [CLS] tag = SOS tag, [SEP] tag = EOS tag
+        t1 = [self.vocab["[CLS]"]] + t1_random + [self.vocab["[SEP]"]]
+        t2 = t2_random + [self.vocab["[SEP]"]]
+    
+        t1_label = [self.vocab["[PAD]"]] + t1_label + [self.vocab["[PAD]"]]
+        t2_label = t2_label + [self.vocab["[PAD]"]]
+    
+        segment_label = ([0 for _ in range(len(t1))] + [1 for _ in range(len(t2))])[:self.seq_len]
+        bert_input = (t1 + t2)[:self.seq_len]
+        bert_label = (t1_label + t2_label)[:self.seq_len]
+    
+        padding = [self.vocab["[PAD]"] for _ in range(self.seq_len - len(bert_input))]
+        bert_input.extend(padding), bert_label.extend(padding), segment_label.extend(padding)
+    
+        # Convert inputs and labels to PyTorch tensors
+        bert_input = torch.tensor(bert_input, dtype=torch.long)
+        bert_label = torch.tensor(bert_label, dtype=torch.long)
+        segment_label = torch.tensor(segment_label, dtype=torch.long)
+        #print(bert_input, bert_label, segment_label)
+    
+        return bert_input, bert_label, segment_label
+        
