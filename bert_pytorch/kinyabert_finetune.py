@@ -34,18 +34,18 @@ def collate_fn(batch):
 
     # Collate the input tensors
     input_ids = torch.stack([item[0] for item in batch])
-    print(f"input_ids shape: {input_ids.shape}, type: {input_ids.dtype}")
+    #print(f"input_ids shape: {input_ids.shape}, type: {input_ids.dtype}")
 
     token_type_ids = torch.stack([item[2] for item in batch])
-    print(f"token_type_ids shape: {token_type_ids.shape}, type: {token_type_ids.dtype}")
+    #print(f"token_type_ids shape: {token_type_ids.shape}, type: {token_type_ids.dtype}")
 
     # Create the attention mask
     attention_mask = input_ids.ne(0).long()
-    print(f"attention_mask shape: {attention_mask.shape}, type: {attention_mask.dtype}")
+    #print(f"attention_mask shape: {attention_mask.shape}, type: {attention_mask.dtype}")
 
     # Collate the labels
     labels = torch.stack([item[1] for item in batch])
-    print(f"labels shape: {labels.shape}, type: {labels.dtype}")
+    #print(f"labels shape: {labels.shape}, type: {labels.dtype}")
 
     return {'input_ids': input_ids, 'attention_mask': attention_mask, 'token_type_ids': token_type_ids, 'labels': labels}
 
