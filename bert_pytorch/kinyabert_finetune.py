@@ -51,6 +51,7 @@ def main():
 
     # Load the pretrained model
     model = AutoModelForMaskedLM.from_pretrained("jean-paul/KinyaBERT-large")
+    model.to(args.device)
     tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
     vocab = tokenizer.get_vocab()
 
