@@ -54,11 +54,15 @@ def calculate_rouge(reference, candidate):
     
     scores = rouge.get_scores(candidate, reference)
     return scores
-def load_model(model, model_path):
+def load_model(model, model_path,device='cpu'):
     if os.path.exists(model_path):
         model.load_state_dict(torch.load(model_path))
+        model.to(device)
+        print(f"Model loaded from {model_path}")
         return model
     else:
+        print(f"Model path {model_path} does not exist")
+        model.to(device)
         return model
 
 def generate_text(model, tokenizer, input_text, max_len=128):
@@ -95,7 +99,7 @@ def main():
     vocab = tokenizer.get_vocab()
     # Load the model from the last saved epoch
     if args.last_saved_epoch is not None:
-        model = load_model(model, f"{args.output_path}_epoch_{args.last_saved_epoch}.pth")
+        model = load_model(model, f"{args.output_path}_epoch_{args.last_saved_epoch}.pth", args.device)
 
     # Load your training and validation data
     train_dataset = KinyaStoryNewDataset(args.train_dataset, tokenizer, seq_len=args.seq_len, on_memory=False)
