@@ -217,7 +217,7 @@ def main():
                 labels = batch["input_ids"].to(args.device)
                 outputs = model(**inputs)
                 loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
-                train_loss += loss.item()
+                train_loss = loss.item()
                 progress_bar.set_postfix({'training_loss': '{:.3f}'.format(loss.item()), 'perplexity': '{:.3f}'.format(calculate_perplexity(loss.item()) )})
                 # Backward pass and optimization
                 loss.backward()
