@@ -54,6 +54,22 @@ def calculate_rouge(reference, candidate):
     
     scores = rouge.get_scores(candidate, reference)
     return scores
+def load_model(model, model_path):
+    if os.path.exists(model_path):
+        model.load_state_dict(torch.load(model_path))
+        return model
+    else:
+        return model
+
+def generate_text(model, tokenizer, input_text, max_len=128):
+    encoded_input = tokenizer(input_text, return_tensors='pt',truncation=True, padding='max_length', max_length=max_len)
+    
+    output = model(**encoded_input)
+    logits = output.logits
+    predicted_index = torch.argmax(logits, dim=-1)
+    predicted_text = tokenizer.decode(predicted_index[0])
+    return predicted_text
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--epochs", type=int, default=10, help="number of epochs")
@@ -77,6 +93,9 @@ def main():
     model.to(args.device)
     tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
     vocab = tokenizer.get_vocab()
+    # Load the model from the last saved epoch
+    if args.last_saved_epoch is not None:
+        model = load_model(model, f"{args.output_path}_epoch_{args.last_saved_epoch}.pth")
 
     # Load your training and validation data
     train_dataset = KinyaStoryNewDataset(args.train_dataset, tokenizer, seq_len=args.seq_len, on_memory=False)
@@ -98,6 +117,7 @@ def main():
     total_val_perplexity = 0
     total_bleu = 0
     #total_rouge = 0
+    best_bleu = 0
     
     config = {  
         "epochs": args.epochs,
@@ -144,6 +164,7 @@ def main():
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
+
         print(f"Training loss: {train_loss}")
         total_train_loss += train_loss
         perplexity = calculate_perplexity(train_loss)
@@ -183,12 +204,17 @@ def main():
         #total_rouge += rouge_score
         wandb.log({"validation_loss": val_loss, "validation perplexity": val_perplexity, "bleu_score": bleu_score})
         # Save the model after each epoch
-        torch.save(model.state_dict(), f"{args.output_path}_epoch_{epoch}.pth")
-        print(f"Total training loss: {total_train_loss}")
-        print(f"Total validation loss: {total_val_loss}")
-        print(f"Total training perplexity: {total_train_perplexity}")
-        print(f"Total validation perplexity: {total_val_perplexity}")
-        print(f"Total BLEU score: {total_bleu}")
+        if bleu_score > best_bleu:
+            best_bleu = bleu_score
+            torch.save(model.state_dict(), f"{args.output_path}_epoch_{epoch}.pth")
+            gc.collect()
+            print(f"Model saved at epoch {epoch}")
+
+    print(f"Total training loss: {total_train_loss}")
+    print(f"Total validation loss: {total_val_loss}")
+    print(f"Total training perplexity: {total_train_perplexity}")
+    print(f"Total validation perplexity: {total_val_perplexity}")
+    print(f"Total BLEU score: {total_bleu}")
     #print(f"Total ROUGE score: {total_rouge}")
     wandb.log({"total training loss": total_train_loss, "total validation loss": total_val_loss, "total training perplexity": total_train_perplexity, "total validation perplexity": total_val_perplexity, "total bleu score": total_bleu})
     # Log the average training and validation loss for the epoch
@@ -197,6 +223,14 @@ def main():
     wandb.log(average)
 
     wandb.finish()
+
+    # Generate text using the model
+    input_text = "Inkatazakurekera  Ibyivugo Inkatazakurekera ya Rugombangogo Ndi intwali yabyirukiye gutsinda, nsinganirwa nshaka kurwana Ubwo duteye Abahunde, nywuhimbajemo intanage Intambara nyirema igihugu cy'umuhinza nakivogeye Umukinzi ampingutse imbere n'isuli,"
+    predicted_text = generate_text(model, tokenizer, input_text)
+    print(f"Input text: {input_text}")
+
+    print(f"Predicted text: {predicted_text}")
+
 
 if __name__ == "__main__":
     main()
