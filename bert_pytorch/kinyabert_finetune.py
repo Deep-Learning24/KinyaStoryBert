@@ -149,6 +149,10 @@ def main():
         )
     wandb.watch(model)
     for epoch in tqdm(range(args.epochs)):
+        # Clean the GPU cache
+        torch.cuda.empty_cache()
+        gc.collect()
+        
         model.train()
         train_loss = 0
         val_loss = 0

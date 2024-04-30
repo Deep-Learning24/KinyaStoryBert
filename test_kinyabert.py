@@ -1,8 +1,9 @@
 import argparse
+import os
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 import torch
 import torch.nn as nn
-from bert_pytorch.kinyabert_finetune import load_model,generate_text
+
 
 tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large")
 
@@ -81,14 +82,35 @@ tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large")
 
 # print("Generated text:", input_text)
 
+def load_model(model, model_path,device='cpu'):
+    if os.path.exists(model_path):
+        model.load_state_dict(torch.load(model_path))
+        model.to(device)
+        print(f"Model loaded from {model_path}")
+        return model
+    else:
+        print(f"Model path {model_path} does not exist")
+        model.to(device)
+        return model
+
+def generate_text(model, tokenizer, input_text, max_len=128):
+    encoded_input = tokenizer(input_text, return_tensors='pt',truncation=True, padding='max_length', max_length=max_len)
+    
+    output = model(**encoded_input)
+    logits = output.logits
+    predicted_index = torch.argmax(logits, dim=-1)
+    predicted_text = tokenizer.decode(predicted_index[0])
+    return predicted_text
+
 class KinyaBertInference:
 
     def __init__(self, model_path,lasy_saved_epoch, device):
         self.model = AutoModelForMaskedLM.from_pretrained("jean-paul/KinyaBERT-large")
         self.model = load_model(self.model, f"{model_path}_epoch_{lasy_saved_epoch}.pth", device)
         self.model.eval()
+        tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
     def generate_text(self, input_text):
-        return generate_text(self.model, input_text)
+        return generate_text(self.model, tokenizer,input_text)
         
 def main():
     parser = argparse.ArgumentParser()
@@ -106,7 +128,7 @@ def main():
     parser.add_argument("--lr", type=float, default=1e-3, help="learning rate of adam")
     parser.add_argument("--text", type=str, default="Ejo ndikwiga nagize abashyitsi baje kunsura. Ndashaka kubona niba bazakwiga cyangwa se bazasura. [MASK] ni umwihariko w'abashyitsi.", help="text to generate")
     
-
+    
     args = parser.parse_args()
     print(args)
     kinyaBertInference = KinyaBertInference(args.output_path,args.last_saved_epoch, args.device)
