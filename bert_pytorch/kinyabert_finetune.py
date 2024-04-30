@@ -203,10 +203,12 @@ def main():
                 # Get the input and labels from the batch
                 inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
                 # Assuming `inputs` is a dictionary containing the input tensors
-                for key, tensor in inputs.items():
-                    if tensor.dim() == 1:
-                        # Reshape the tensor to have a batch dimension
-                        inputs[key] = tensor.view(1, -1)
+                # Before this line: outputs = model(**inputs)
+                inputs_shape = inputs['input_ids'].shape
+                if len(inputs_shape) != 2:
+                    # Reshape or pad your inputs here
+                    # This is just an example, you need to adjust this according to your needs
+                    inputs['input_ids'] = inputs['input_ids'].reshape(-1, 2)
                 
                 labels = batch["input_ids"].to(args.device)
                 outputs = model(**inputs)
