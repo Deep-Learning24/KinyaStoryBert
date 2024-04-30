@@ -61,7 +61,7 @@ def main():
             # Forward pass
             #print(batch)
             outputs= model(**batch)
-            print(outputs)
+            #print(outputs)
             loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), batch["labels"].view(-1))
             print(f"Training loss: {loss}")
             # Backward pass and optimization
