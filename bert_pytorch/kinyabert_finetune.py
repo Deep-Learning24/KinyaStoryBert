@@ -189,7 +189,7 @@ def main():
         name="KinyaBERT-large-finetuning",
         notes="Fine-tuning KinyaBERT-large on KinyaStoryNewDataset",
         tags=["kinyabert", "kinyastory", "finetuning"],
-        id="kinyabert-large-finetune"
+        id="kinyabert-large-finetun"
         )
     wandb.watch(model)
     for epoch in range(args.epochs):
