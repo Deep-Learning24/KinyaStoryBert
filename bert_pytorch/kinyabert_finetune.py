@@ -186,7 +186,7 @@ def main():
         project="project-ablations", 
         config=config,
         reinit=True,
-        name="KinyaBERT-large-finetune",
+        name="KinyaBERT-large-finetuning",
         notes="Fine-tuning KinyaBERT-large on KinyaStoryNewDataset",
         tags=["kinyabert", "kinyastory", "finetuning"],
         id="kinyabert-large-finetune"
