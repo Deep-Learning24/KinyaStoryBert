@@ -56,7 +56,7 @@ def calculate_rouge(reference, candidate):
     return scores
 def load_model(model, model_path,device='cpu'):
     if os.path.exists(model_path):
-        model.load_state_dict(torch.load(model_path))
+        model.load_state_dict(torch.load(model_path), map_location=torch.device(device))
         model.to(device)
         print(f"Model loaded from {model_path}")
         return model
@@ -152,7 +152,7 @@ def main():
         # Clean the GPU cache
         torch.cuda.empty_cache()
         gc.collect()
-        
+
         model.train()
         train_loss = 0
         val_loss = 0
@@ -163,7 +163,7 @@ def main():
             # Forward pass
             # Get the input and labels from the batch
             inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
-            labels = batch["labels"].to(args.device)
+            labels = batch["input_ids"].to(args.device)
             outputs = model(**inputs)
             loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
             train_loss += loss.item()
@@ -188,7 +188,7 @@ def main():
             for batch in progress_bar:
                 # move the tensors to the device
                 inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
-                labels = batch["labels"].to(args.device)
+                labels = batch["input_ids"].to(args.device)
                 outputs = model(**inputs)
                 loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
                 val_loss += loss.item()

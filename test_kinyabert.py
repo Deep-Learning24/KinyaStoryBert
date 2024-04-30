@@ -82,9 +82,9 @@ tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large")
 
 # print("Generated text:", input_text)
 
-def load_model(model, model_path,device='cpu'):
+def load_model(model, model_path, device='cpu'):
     if os.path.exists(model_path):
-        model.load_state_dict(torch.load(model_path))
+        model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
         model.to(device)
         print(f"Model loaded from {model_path}")
         return model
@@ -122,7 +122,7 @@ def main():
     parser.add_argument("-s", "--seq_len", type=int, default=128, help="maximum sequence len")
     parser.add_argument("-c", "--train_dataset", default="kinyastory_data/train_stories.txt", type=str, help="train dataset for train bert")
     parser.add_argument("-t", "--test_dataset", type=str, default="kinyastory_data/val_stories.txt", help="test set for evaluate train set")
-    parser.add_argument("-o", "--output_path", default = "output/bert.model_finetuned" , type=str, help="ex)output/bert.model_finetuned")
+    parser.add_argument("-o", "--output_path", default = "bert_pytorch/output/bert.model_finetuned" , type=str, help="ex)output/bert.model_finetuned")
     parser.add_argument("-p", "--last_saved_epoch", type=int, default=None, help="epoch of last saved model")
     parser.add_argument("-b", "--batch_size", type=int, default=64, help="number of batch_size")
     parser.add_argument("--lr", type=float, default=1e-3, help="learning rate of adam")
