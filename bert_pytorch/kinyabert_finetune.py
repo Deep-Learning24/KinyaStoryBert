@@ -91,6 +91,8 @@ def main():
     
 
     args = parser.parse_args()
+    if not os.path.exists(args.output_path):
+        os.makedirs(args.output_path)
 
     # Load the pretrained model
     model = AutoModelForMaskedLM.from_pretrained("jean-paul/KinyaBERT-large")
