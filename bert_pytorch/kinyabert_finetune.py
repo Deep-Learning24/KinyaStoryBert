@@ -22,19 +22,32 @@ from rouge import Rouge
 import torch.nn as nn
 
 def collate_fn(batch):
+    # Filter out None items and items with None elements
+    batch = [item for item in batch if item is not None and all(element is not None for element in item)]
+
+    if len(batch) == 0:
+        # Return a dictionary of empty tensors if batch is empty
+        return {'input_ids': torch.tensor([], dtype=torch.long), 
+                'attention_mask': torch.tensor([], dtype=torch.long), 
+                'token_type_ids': torch.tensor([], dtype=torch.long), 
+                'labels': torch.tensor([], dtype=torch.long)}
+
     # Collate the input tensors
     input_ids = torch.stack([item[0] for item in batch])
+    print(f"input_ids shape: {input_ids.shape}, type: {input_ids.dtype}")
+
     token_type_ids = torch.stack([item[2] for item in batch])
+    print(f"token_type_ids shape: {token_type_ids.shape}, type: {token_type_ids.dtype}")
 
     # Create the attention mask
     attention_mask = input_ids.ne(0).long()
+    print(f"attention_mask shape: {attention_mask.shape}, type: {attention_mask.dtype}")
 
     # Collate the labels
     labels = torch.stack([item[1] for item in batch])
+    print(f"labels shape: {labels.shape}, type: {labels.dtype}")
 
     return {'input_ids': input_ids, 'attention_mask': attention_mask, 'token_type_ids': token_type_ids, 'labels': labels}
-
-
 
 def calculate_perplexity(loss):
     clipped_loss = np.clip(loss, None, 50)  # clip to avoid overflow
@@ -106,7 +119,7 @@ def main():
         model = load_model(model, f"{args.output_path}_epoch_{args.last_saved_epoch}.pth", args.device)
 
     # Load your training and validation data
-    train_dataset = KinyaStoryNewDataset(args.train_dataset, tokenizer, seq_len=args.seq_len, on_memory=False)
+    train_dataset = KinyaStoryNewDataset(args.train_dataset, tokenizer, seq_len=args.seq_len, on_memory=True)
     val_dataset = KinyaStoryNewDataset(args.test_dataset, tokenizer, seq_len=args.seq_len, on_memory=False) if args.test_dataset is not None else None
 
 
@@ -141,6 +154,29 @@ def main():
         "batch_size": args.batch_size,
         "lr": args.lr
     }
+
+
+    # # Iterate over each batch in the training DataLoader
+    # print("Loading training data...")
+    # try:
+    #     for i, batch in enumerate(tqdm(train_loader)):
+    #         print(f"Loaded batch {i}")
+    # except Exception as e:
+    #     print(f"Error loading batch {i}: {e}")
+
+    # # Iterate over each batch in the validation DataLoader
+    # # Iterate over each batch in the validation DataLoader
+    # if val_loader is not None:
+    #     print("Loading validation data...")
+    #     try:
+    #         for i, batch in enumerate(tqdm(val_loader)):
+    #             print(f"Loaded batch {i}")
+    #     except Exception as e:
+    #         print(f"Error loading batch {i}: {e}")
+    
+    # print("Done loading data")
+    # return
+
     wandb.login(key="3644f3d76a394594794c1b136a20f75303e871ba")
     wandb.init(
         project="project-ablations", 
