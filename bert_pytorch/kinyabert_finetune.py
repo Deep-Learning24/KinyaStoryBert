@@ -25,12 +25,16 @@ def collate_fn(batch):
     # Filter out None items and items with None elements
     batch = [item for item in batch if item is not None and all(element is not None for element in item)]
 
+    sequence_length = 128  # Replace with your actual sequence length
+
     if len(batch) == 0:
-        # Return a dictionary of empty tensors if batch is empty
-        return {'input_ids': torch.tensor([], dtype=torch.long), 
-                'attention_mask': torch.tensor([], dtype=torch.long), 
-                'token_type_ids': torch.tensor([], dtype=torch.long), 
-                'labels': torch.tensor([], dtype=torch.long)}
+        # Return a dictionary of tensors with the correct shape if batch is empty
+        return {'input_ids': torch.empty((0, sequence_length), dtype=torch.long), 
+                'attention_mask': torch.empty((0, sequence_length), dtype=torch.long), 
+                'token_type_ids': torch.empty((0, sequence_length), dtype=torch.long), 
+                'labels': torch.empty((0,), dtype=torch.long)}
+
+    # Rest of the function...
 
     # Collate the input tensors
     input_ids = torch.stack([item[0] for item in batch])
