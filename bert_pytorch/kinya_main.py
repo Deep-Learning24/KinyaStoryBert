@@ -78,6 +78,9 @@ def train():
     print("Building BERT model")
     bert = BERT(len(vocab), hidden=args.hidden, n_layers=args.layers, attn_heads=args.attn_heads)
 
+    # Print the model architecture
+    print(bert)
+
     print("Creating BERT Trainer")
     trainer = KinyaStoryBERTTrainer(bert, len(vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader,
                           lr=args.lr, betas=(args.adam_beta1, args.adam_beta2), weight_decay=args.adam_weight_decay,

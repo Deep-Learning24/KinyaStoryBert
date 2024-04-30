@@ -20,6 +20,8 @@ from nltk.translate.bleu_score import SmoothingFunction
 from nltk.translate.bleu_score import sentence_bleu
 from rouge import Rouge
 import torch.nn as nn
+import torch.optim as optim
+from torch.cuda.amp import GradScaler, autocast
 
 def collate_fn(batch):
     # Filter out None items and items with None elements
@@ -116,6 +118,9 @@ def main():
     # Load the pretrained model
     model = AutoModelForMaskedLM.from_pretrained("jean-paul/KinyaBERT-large")
     model.to(args.device)
+    # Print the model architecture
+    print(model)
+
     tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
     vocab = tokenizer.get_vocab()
     # Load the model from the last saved epoch
@@ -134,7 +139,9 @@ def main():
     # Define your optimizer and loss function
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     loss_fn = nn.CrossEntropyLoss(ignore_index=0) # ignore padding token
-
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
+    scaler = GradScaler()
+     
     # Train the model
     total_train_loss = 0
     total_val_loss = 0
@@ -216,15 +223,18 @@ def main():
                     inputs['input_ids'] = inputs['input_ids'].reshape(-1, 2)
                 
                 labels = batch["input_ids"].to(args.device)
-                outputs = model(**inputs)
-                loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
-                train_loss = loss.item()
+                with autocast():
+                    outputs = model(**inputs)
+                    loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
+                    train_loss = loss.item()
+
                 progress_bar.set_postfix({'training_loss': '{:.3f}'.format(loss.item()), 'perplexity': '{:.3f}'.format(calculate_perplexity(loss.item()) )})
                 # Backward pass and optimization
-                loss.backward()
-                optimizer.step()
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
                 optimizer.zero_grad()
-    
+                scheduler.step()
         total_train_loss += train_loss
         perplexity = calculate_perplexity(train_loss)
         total_train_perplexity += perplexity
