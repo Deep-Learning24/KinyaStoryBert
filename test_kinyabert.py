@@ -28,9 +28,10 @@ labels[:, -1] = -100
 inputs = {key: tensor.squeeze(0) for key, tensor in encoded_input.items()}
 inputs["labels"] = labels.squeeze(0)
 
-# Print the input dictionary
-print("Input dictionary:")
-print(inputs)
+# # Print the input dictionary
+# print("Input dictionary:")
+# print(inputs)
+print(encoded_input.keys())
 
 print(encoded_input)
 output = model(**encoded_input)

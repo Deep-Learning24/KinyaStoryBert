@@ -22,14 +22,10 @@ def collate_fn(batch):
     # Collate the input tensors
     input_ids = torch.stack([item['input_ids'] for item in batch])
     attention_mask = torch.stack([item['attention_mask'] for item in batch])
-    
+    token_type_ids = torch.stack([item['token_type_ids'] for item in batch])
     # Collate the labels
     labels = torch.stack([item['labels'] for item in batch])
-
-    # Move the tensors to the device
-    
-    
-    return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
+    return {'input_ids': input_ids, 'attention_mask': attention_mask, 'token_type_ids': token_type_ids, 'labels': labels}
 
 def main():
     parser = argparse.ArgumentParser()
@@ -75,18 +71,22 @@ def main():
         model.train()
         train_loss = 0
         val_loss = 0
-        for batch in train_loader:
-            # Forward pass
-            # move the tensors to the device
-            for key in batch:
-                batch[key] = batch[key].to(args.device)
-            outputs = model(**batch)
-            loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), batch["labels"].view(-1))
-            train_loss += loss.item()
-            # Backward pass and optimization
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
+        for epoch in tqdm(range(args.epochs)):
+            model.train()
+            train_loss = 0
+            val_loss = 0
+            for batch in train_loader:
+                # Forward pass
+                # Get the input and labels from the batch
+                inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
+                labels = batch["labels"].to(args.device)
+                outputs = model(**inputs)
+                loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
+                train_loss += loss.item()
+                # Backward pass and optimization
+                loss.backward()
+                optimizer.step()
+                optimizer.zero_grad()
         print(f"Training loss: {train_loss}")
         total_train_loss += train_loss
 
@@ -95,11 +95,11 @@ def main():
         with torch.no_grad():
             for batch in val_loader:
                 # move the tensors to the device
-                for key in batch:
-                    batch[key] = batch[key].to(args.device)
-                outputs = model(**batch)
-                val_loss =  loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), batch["labels"].view(-1))
-                val_loss += val_loss.item()
+                inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
+                labels = batch["labels"].to(args.device)
+                outputs = model(**inputs)
+                loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
+                val_loss += loss.item()
         print(f"Validation loss: {val_loss}")
         total_val_loss += val_loss
         # Save the model after each epoch
