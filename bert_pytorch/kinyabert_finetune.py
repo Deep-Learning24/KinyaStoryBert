@@ -102,7 +102,7 @@ def main():
     parser.add_argument("-a", "--attn_heads", type=int, default=8, help="number of attention heads")
     parser.add_argument("-s", "--seq_len", type=int, default=128, help="maximum sequence len")
     parser.add_argument("-c", "--train_dataset", default="kinyastory_data/train_stories.txt", type=str, help="train dataset for train bert")
-    parser.add_argument("-t", "--test_dataset", type=str, default="kinyastory_data/val_stories.txt", help="test set for evaluate train set")
+    parser.add_argument("-t", "--test_dataset", type=str, default="kinyastory_data/train_stories.txt", help="test set for evaluate train set")
     parser.add_argument("-o", "--output_path", default = "output/bert.model_finetuned" , type=str, help="ex)output/bert.model_finetuned")
     parser.add_argument("-p", "--last_saved_epoch", type=int, default=None, help="epoch of last saved model")
     parser.add_argument("-b", "--batch_size", type=int, default=64, help="number of batch_size")
