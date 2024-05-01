@@ -3,7 +3,9 @@ import os
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 import torch
 import torch.nn as nn
-
+from nltk.translate.bleu_score import SmoothingFunction
+from nltk.translate.bleu_score import sentence_bleu
+import numpy as np
 
 tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large")
 
@@ -82,6 +84,19 @@ tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large")
 
 # print("Generated text:", input_text)
 
+def calculate_perplexity(loss):
+    clipped_loss = np.clip(loss, None, 50)  # clip to avoid overflow
+    perplexity = np.exp(clipped_loss)
+    return perplexity
+
+
+def calculate_bleu(reference, candidate):
+    reference = [reference.split()]
+    candidate = candidate.split()
+    smoothie = SmoothingFunction().method4
+    score = sentence_bleu(reference, candidate, smoothing_function=smoothie)
+    return score
+
 def load_model(model, model_path, device='cpu'):
     if os.path.exists(model_path):
         model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
@@ -100,7 +115,10 @@ def generate_text(model, tokenizer, input_text, max_len=128):
     logits = output.logits
     predicted_index = torch.argmax(logits, dim=-1)
     predicted_text = tokenizer.decode(predicted_index[0])
-    return predicted_text
+    # Find the NNL loss of the predicted text
+    loss = nn.CrossEntropyLoss()(logits.view(-1, logits.size(-1)), encoded_input["input_ids"].view(-1))
+
+    return predicted_text, loss.item()
 
 class KinyaBertInference:
 
@@ -110,7 +128,14 @@ class KinyaBertInference:
         self.model.eval()
         tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
     def generate_text(self, input_text):
-        return generate_text(self.model, tokenizer,input_text)
+        generated_text,loss = generate_text(self.model, tokenizer, input_text)
+        # Calculate the Blue and perplexity of the generated text
+        bleu = calculate_bleu(input_text, generated_text)
+        perplexity = calculate_perplexity(loss)
+
+        print("Loss:", loss)
+
+        return generated_text, bleu, perplexity
         
 def main():
     parser = argparse.ArgumentParser()
@@ -126,13 +151,17 @@ def main():
     parser.add_argument("-p", "--last_saved_epoch", type=int, default=None, help="epoch of last saved model")
     parser.add_argument("-b", "--batch_size", type=int, default=64, help="number of batch_size")
     parser.add_argument("--lr", type=float, default=1e-3, help="learning rate of adam")
-    parser.add_argument("--text", type=str, default="Ejo ndikwiga nagize abashyitsi baje kunsura. Ndashaka kubona niba bazakwiga cyangwa se bazasura. [MASK] ni umwihariko w'abashyitsi.", help="text to generate")
+    parser.add_argument("--text", type=str, default="Umusaza n'abuzukuru be Umugani muremure Bawucira abana babigisha ubwumvikane mumuryango Umusaza yari afite	abuzukuru batatu b'abasore; abo bana ntibumvikane, ahubwo iteka bagahora batongana. Sekuru yabireba bikamubabaza cyane. Bukeye arababwira ati bana banjye, mujye mubana neza	ntimugahore mupfa ubusa. Abasore bawe ntibabyiteho bikomereza umwiryane wabo.", help="text to generate")
     
     
     args = parser.parse_args()
-    print(args)
+    # print(args)
+    print("Original text:", args.text)
     kinyaBertInference = KinyaBertInference(args.output_path,args.last_saved_epoch, args.device)
-    print(kinyaBertInference.generate_text(args.text))
+    generated_text, bleu, perplexity = kinyaBertInference.generate_text(args.text)
+    print("Generated text:", generated_text)
+    print("BLEU score:", bleu)
+    print("Perplexity:", perplexity)
 
 if __name__ == "__main__":
     main()
