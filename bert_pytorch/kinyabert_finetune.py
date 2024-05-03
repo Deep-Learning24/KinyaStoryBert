@@ -227,13 +227,16 @@ def main():
                     # Reshape or pad your inputs here
                     # This is just an example, you need to adjust this according to your needs
                     inputs['input_ids'] = inputs['input_ids'].reshape(-1, 2)
+
+                
+                input_ids = inputs['input_ids']
                 
                 labels = batch['input_ids'].to(args.device)
                 # print(inputs)
                 # print(inputs['input_ids'].shape)
                 # print(inputs['token_type_ids'].shape)
                 with autocast():
-                    outputs = model(**inputs)
+                    outputs = model(input_ids=input_ids, labels=labels)
                     loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
                     train_loss = loss.item()
 
