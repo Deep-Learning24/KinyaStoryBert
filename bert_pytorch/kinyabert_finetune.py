@@ -23,6 +23,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.cuda.amp import GradScaler, autocast
 
+tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
 def collate_fn(batch):
     # Filter out None items and items with None elements
     batch = [item for item in batch if item is not None and all(element is not None for element in item)]
@@ -91,6 +92,13 @@ def generate_text(model, tokenizer, input_text, max_len=128,device='cpu'):
     predicted_text = tokenizer.decode(predicted_index[0])
     return predicted_text
 
+def custom_loss_fn(output, target, ignore_indices=[tokenizer.pad_token_id, -100]):
+    loss = nn.CrossEntropyLoss(reduction='none')(output, target)
+    for idx in ignore_indices:
+        loss[target == idx] = 0
+    return loss.mean()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--epochs", type=int, default=10, help="number of epochs")
@@ -134,7 +142,7 @@ def main():
 
     # Define your optimizer and loss function
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
+    loss_fn = custom_loss_fn
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
     scaler = GradScaler()
      

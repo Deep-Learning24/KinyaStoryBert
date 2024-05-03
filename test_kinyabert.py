@@ -6,7 +6,10 @@ import torch.nn as nn
 from nltk.translate.bleu_score import SmoothingFunction
 from nltk.translate.bleu_score import sentence_bleu
 import numpy as np
+from torch.utils.data import DataLoader
+from transformers import AdamW
 
+from torch.nn import CrossEntropyLoss
 tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large")
 
 # model = AutoModelForMaskedLM.from_pretrained("jean-paul/KinyaBERT-large")
@@ -108,15 +111,17 @@ def load_model(model, model_path, device='cpu'):
         model.to(device)
         return model
 
-def generate_text(model, tokenizer, input_text, max_len=128):
-    encoded_input = tokenizer(input_text, return_tensors='pt',truncation=True, padding='max_length', max_length=max_len)
+
+def generate_text(model, tokenizer, input_text, expected_output_text, max_len=128):
+    encoded_input = tokenizer(input_text, return_tensors='pt', truncation=True, padding='max_length', max_length=max_len)
+    encoded_output = tokenizer(expected_output_text, return_tensors='pt', truncation=True, padding='max_length', max_length=max_len)
     encoded_input = {key: tensor.to(model.device) for key, tensor in encoded_input.items()}
-    output = model(**encoded_input)
+    encoded_output = {key: tensor.to(model.device) for key, tensor in encoded_output.items()}
+    output = model(**encoded_input, labels=encoded_output["input_ids"])
     logits = output.logits
     predicted_index = torch.argmax(logits, dim=-1)
     predicted_text = tokenizer.decode(predicted_index[0])
-    # Find the NNL loss of the predicted text
-    loss = nn.CrossEntropyLoss()(logits.view(-1, logits.size(-1)), encoded_input["input_ids"].view(-1))
+    loss = output.loss
 
     return predicted_text, loss.item()
 
@@ -126,9 +131,38 @@ class KinyaBertInference:
         self.model = AutoModelForMaskedLM.from_pretrained("jean-paul/KinyaBERT-large")
         self.model = load_model(self.model, f"{model_path}_epoch_{lasy_saved_epoch}.pth", device)
         self.model.eval()
-        tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
+        self.tokenizer = AutoTokenizer.from_pretrained("jean-paul/KinyaBERT-large", max_length=128)
+    def train_model(self, text, expected_output_text, max_len=128, epochs=5):
+        # Prepare the data
+        encoded_input = self.tokenizer(text, return_tensors='pt', truncation=True, padding='max_length', max_length=max_len)
+        encoded_output = self.tokenizer(expected_output_text, return_tensors='pt', truncation=True, padding='max_length', max_length=max_len)
+
+        # Prepare the optimizer
+        optimizer = AdamW(self.model.parameters())
+
+        # Define the loss function, ignoring the padding tokens
+        loss_function = CrossEntropyLoss(ignore_index=self.tokenizer.pad_token_id)
+
+        # Train the model
+        self.model.train()
+        for epoch in range(epochs):
+            optimizer.zero_grad()
+            input_ids = encoded_input['input_ids'].to(self.model.device)
+            labels = encoded_output['input_ids'].to(self.model.device)
+            outputs = self.model(input_ids=input_ids, labels=labels)
+            logits = outputs.logits
+            # Flatten the logits and labels before passing them to the loss function
+            loss = loss_function(logits.view(-1, logits.shape[-1]), labels.view(-1))
+            loss.backward()
+            optimizer.step()
+
+            print(f'Epoch {epoch+1}/{epochs} Loss: {loss.item()}')
+
+        return self.model
+        
+
     def generate_text(self, input_text):
-        generated_text,loss = generate_text(self.model, tokenizer, input_text)
+        generated_text,loss = generate_text(self.model, tokenizer, input_text, input_text, max_len=128)
         # Calculate the Blue and perplexity of the generated text
         bleu = calculate_bleu(input_text, generated_text)
         perplexity = calculate_perplexity(loss)
@@ -158,6 +192,16 @@ def main():
     # print(args)
     print("Original text:", args.text)
     kinyaBertInference = KinyaBertInference(args.output_path,args.last_saved_epoch, args.device)
+
+    generated_text, bleu, perplexity = kinyaBertInference.generate_text(args.text)
+    print("Generated text:", generated_text)
+    print("BLEU score:", bleu)
+    print("Perplexity:", perplexity)
+
+    # Train the model
+    kinyaBertInference.train_model(args.text, args.text, max_len=args.seq_len, epochs=args.epochs)
+
+    # DO enference again
     generated_text, bleu, perplexity = kinyaBertInference.generate_text(args.text)
     print("Generated text:", generated_text)
     print("BLEU score:", bleu)
