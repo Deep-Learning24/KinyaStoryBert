@@ -1,0 +1,79 @@
+wandb_version: 1
+
+epochs:
+  desc: null
+  value: 1
+device:
+  desc: null
+  value: cpu
+hidden:
+  desc: null
+  value: 256
+layers:
+  desc: null
+  value: 8
+attn_heads:
+  desc: null
+  value: 8
+seq_len:
+  desc: null
+  value: 128
+train_dataset:
+  desc: null
+  value: kinyastory_data/train_stories.txt
+test_dataset:
+  desc: null
+  value: kinyastory_data/val_stories.txt
+output_path:
+  desc: null
+  value: output/bert.model_finetuned
+last_saved_epoch:
+  desc: null
+  value: null
+batch_size:
+  desc: null
+  value: 64
+lr:
+  desc: null
+  value: 0.001
+_wandb:
+  desc: null
+  value:
+    python_version: 3.11.4
+    cli_version: 0.16.4
+    framework: huggingface
+    huggingface_version: 4.40.1
+    is_jupyter_run: false
+    is_kaggle_kernel: true
+    start_time: 1714738828.0
+    t:
+      1:
+      - 1
+      - 5
+      - 11
+      - 49
+      - 53
+      - 55
+      2:
+      - 1
+      - 5
+      - 11
+      - 49
+      - 53
+      - 55
+      3:
+      - 1
+      - 13
+      - 14
+      - 15
+      - 16
+      - 23
+      - 37
+      4: 3.11.4
+      5: 0.16.4
+      6: 4.40.1
+      8:
+      - 2
+      - 3
+      - 5
+      13: windows-amd64

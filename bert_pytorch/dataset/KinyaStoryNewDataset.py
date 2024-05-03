@@ -87,103 +87,24 @@ class KinyaStoryNewDataset(Dataset):
 
     def __len__(self):
         return self.corpus_lines
-    
-
-    def random_word(self, sentence):
-        tokens = self.tokenizer.tokenize(sentence)
-        output_label = []
-
-        for i, token in enumerate(tokens):
-            prob = random.random()
-            if prob < 0.15:
-                prob /= 0.15
-
-                # 80% randomly change token to mask token
-                if prob < 0.8:
-                    tokens[i] = self.vocab["[MASK]"]
-
-                # 10% randomly change token to random token
-                elif prob < 0.9:
-                    tokens[i] = random.randrange(len(self.vocab))
-
-                # 10% randomly change token to current token
-                else:
-                    tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
-
-                output_label.append(self.vocab.get(token, self.vocab["[UNK]"]))
-
-            else:
-                tokens[i] = self.vocab.get(token, self.vocab["[UNK]"])
-                output_label.append(0)
-
-        return tokens, output_label
-
-
-    def random_sent(self, index):
-        t1, t2 = self.get_corpus_line(index)
-
-        # output_text, label(isNotNext:0, isNext:1)
-        if random.random() > 0.5:
-            return t1, t2, 1
-        else:
-            return t1, self.get_random_line(), 0
-
-    def get_corpus_line(self, item):
-        if self.on_memory:
-            return self.lines[item][0], self.lines[item][1]
-        else:
-            line = self.file.__next__()
-            if line is None:
-                self.file.close()
-                self.file = open(self.corpus_path, "r", encoding=self.encoding)
-                line = self.file.__next__()
-
-            t1, t2 = line[:-1].split("\t")
-            return t1, t2
-
-    def get_random_line(self):
-        if self.on_memory:
-            return self.lines[random.randrange(len(self.lines))][1]
-
-        line = self.file.__next__()
-        if line is None:
-            self.file.close()
-            self.file = open(self.corpus_path, "r", encoding=self.encoding)
-            for _ in range(random.randint(self.corpus_lines if self.corpus_lines < 1000 else 1000)):
-                self.random_file.__next__()
-            line = self.random_file.__next__()
-        return line[:-1].split("\t")[1]
 
         
     def __getitem__(self, index):
-        try:
-            t1, t2, is_next_label = self.random_sent(index)
-            t1_random, t1_label = self.random_word(t1)
-            t2_random, t2_label = self.random_word(t2)
-
-            # [CLS] tag = SOS tag, [SEP] tag = EOS tag
-            t1 = [self.vocab["[CLS]"]] + t1_random + [self.vocab["[SEP]"]]
-            t2 = t2_random + [self.vocab["[SEP]"]]
-
-            t1_label = [self.vocab["[PAD]"]] + t1_label + [self.vocab["[PAD]"]]
-            t2_label = t2_label + [self.vocab["[PAD]"]]
-
-            segment_label = ([0 for _ in range(len(t1))] + [1 for _ in range(len(t2))])[:self.seq_len]
-            bert_input = (t1 + t2)[:self.seq_len]
-            bert_label = (t1_label + t2_label)[:self.seq_len]
-
-            padding = [self.vocab["[PAD]"] for _ in range(self.seq_len - len(bert_input))]
-            bert_input.extend(padding), bert_label.extend(padding), segment_label.extend(padding)
-
-            # Convert inputs and labels to PyTorch tensors
-            bert_input = torch.tensor(bert_input, dtype=torch.long)
-            bert_label = torch.tensor(bert_label, dtype=torch.long)
-            segment_label = torch.tensor(segment_label, dtype=torch.long)
-
-            return bert_input, bert_label, segment_label
-        except Exception as e:
-            print(f"Error of type {type(e).__name__} occurred. Message: {e}")
-            return None, None, None
+        if self.on_memory:
+            line = self.lines[index]
+        else:
+            line = self.file.readline()[:-1]
+    
+        # # Tokenize the text
+        # if line.strip():
+        # Join the two parts of the line
+        line = " ".join(line)
+        #print(line)
+        tokenized = self.tokenizer(line, return_tensors='pt', truncation=True, padding='max_length', max_length=self.seq_len)
+        #print(tokenized)
+        return tokenized
+        # else:
+        #     return self.__getitem__(random.randint(0, self.corpus_lines - 1))
             
                         
             

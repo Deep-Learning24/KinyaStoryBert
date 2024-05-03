@@ -27,33 +27,29 @@ def collate_fn(batch):
     # Filter out None items and items with None elements
     batch = [item for item in batch if item is not None and all(element is not None for element in item)]
 
-    sequence_length = 128  # Replace with your actual sequence length
+    # Pad the sequences to the maximum sequence length
+    input_ids = [item["input_ids"].squeeze() for item in batch]
+    attention_mask = [item["attention_mask"].squeeze() for item in batch]
+    token_type_ids = [item["token_type_ids"].squeeze() for item in batch]
+    # labels should be exactly the same as input_ids
+    labels = [item["input_ids"].squeeze() for item in batch]
 
-    if len(batch) == 0:
-        # Return a dictionary of tensors with the correct shape if batch is empty
-        return {'input_ids': torch.empty((0, sequence_length), dtype=torch.long), 
-                'attention_mask': torch.empty((0, sequence_length), dtype=torch.long), 
-                'token_type_ids': torch.empty((0, sequence_length), dtype=torch.long), 
-                'labels': torch.empty((0,), dtype=torch.long)}
+    # Pad the input_ids and attention_mask
+    input_ids = torch.nn.utils.rnn.pad_sequence(input_ids, batch_first=True, padding_value=0)
+    attention_mask = torch.nn.utils.rnn.pad_sequence(attention_mask, batch_first=True, padding_value=0)
+    labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True, padding_value=0)
+    token_type_ids = torch.nn.utils.rnn.pad_sequence(token_type_ids, batch_first=True, padding_value=0)
 
-   
+    # Ensure token_type_ids has the same shape as input_ids
+    if token_type_ids.shape != input_ids.shape:
+        token_type_ids = torch.zeros_like(input_ids)
 
-    # Collate the input tensors
-    input_ids = torch.stack([item[0] for item in batch])
-    #print(f"input_ids shape: {input_ids.shape}, type: {input_ids.dtype}")
-
-    token_type_ids = torch.stack([item[2] for item in batch])
-    #print(f"token_type_ids shape: {token_type_ids.shape}, type: {token_type_ids.dtype}")
-
-    # Create the attention mask
-    attention_mask = input_ids.ne(0).long()
-    #print(f"attention_mask shape: {attention_mask.shape}, type: {attention_mask.dtype}")
-
-    # Collate the labels
-    labels = torch.stack([item[1] for item in batch])
-    #print(f"labels shape: {labels.shape}, type: {labels.dtype}")
-
-    return {'input_ids': input_ids, 'attention_mask': attention_mask, 'token_type_ids': token_type_ids, 'labels': labels}
+    return {
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
+        "token_type_ids": token_type_ids,
+        "labels": labels
+    }
 
 def calculate_perplexity(loss):
     clipped_loss = np.clip(loss, None, 50)  # clip to avoid overflow
@@ -133,12 +129,12 @@ def main():
 
 
     # Create a DataLoader for your training and validation data
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,collate_fn=collate_fn)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size,collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn) if val_dataset is not None else None
 
     # Define your optimizer and loss function
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    loss_fn = nn.CrossEntropyLoss(ignore_index=0) # ignore padding token
+    loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
     scaler = GradScaler()
      
@@ -213,16 +209,21 @@ def main():
             for batch in progress_bar:
                 # Forward pass
                 # Get the input and labels from the batch
-                inputs = {key: tensor.squeeze(0).to(args.device) for key, tensor in batch.items() if key != "labels"}
+                #print(batch)
+                inputs = {key: tensor.to(args.device) for key, tensor in batch.items()}
                 # Assuming `inputs` is a dictionary containing the input tensors
                 # Before this line: outputs = model(**inputs)
                 inputs_shape = inputs['input_ids'].shape
+                #print(inputs_shape)
                 if len(inputs_shape) != 2:
                     # Reshape or pad your inputs here
                     # This is just an example, you need to adjust this according to your needs
                     inputs['input_ids'] = inputs['input_ids'].reshape(-1, 2)
                 
-                labels = batch["input_ids"].to(args.device)
+                labels = batch['input_ids'].to(args.device)
+                # print(inputs)
+                # print(inputs['input_ids'].shape)
+                # print(inputs['token_type_ids'].shape)
                 with autocast():
                     outputs = model(**inputs)
                     loss = loss_fn(outputs.logits.view(-1, outputs.logits.size(-1)), labels.view(-1))
@@ -239,7 +240,9 @@ def main():
         perplexity = calculate_perplexity(train_loss)
         total_train_perplexity += perplexity
         candidate = " ".join(decode(tokenizer, inputs["input_ids"].squeeze().tolist()))
+        #print(f"Predicted text: {candidate}")
         reference = " ".join(decode(tokenizer, labels.squeeze().tolist()))
+        #print(f"Reference text: {reference}")
     
         bleu_score = calculate_bleu(reference, candidate)
         if best_loss > train_loss:
